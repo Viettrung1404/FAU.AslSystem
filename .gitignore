@@ -1,0 +1,22 @@
+# Local credentials and environment overrides
+.env
+.env.*
+!.env.example
+!.env.test.example
+
+# Maven build output
+target/
+*.class
+*.log
+
+# IDE and local tooling
+.idea/
+.vscode/
+*.iml
+.tools/
+__pycache__/
+*.py[cod]
+
+# OS files
+.DS_Store
+Thumbs.db

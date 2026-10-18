@@ -1,0 +1,50 @@
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  application:
+    name: asl-backend
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:5}
+      minimum-idle: 0
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.default_schema: asl
+  flyway:
+    url: ${DB_MIGRATION_URL:${DB_URL}}
+    user: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    default-schema: public
+    locations: classpath:db/migration
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+server:
+  port: ${PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db
+        liveness:
+          include: livenessState
+logging:
+  pattern:
+    level: '%5p [requestId=%X{requestId:-}]'

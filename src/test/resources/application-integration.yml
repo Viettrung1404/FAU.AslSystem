@@ -1,0 +1,14 @@
+spring:
+  config:
+    import: optional:file:.env.test[.properties]
+  datasource:
+    url: ${TEST_DB_URL}
+    username: ${TEST_DB_USERNAME}
+    password: ${TEST_DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 2
+      minimum-idle: 0
+  flyway:
+    url: ${TEST_DB_URL}
+    user: ${TEST_DB_USERNAME}
+    password: ${TEST_DB_PASSWORD}
