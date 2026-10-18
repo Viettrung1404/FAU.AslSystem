@@ -1,15 +1,32 @@
 package com.asl.backend;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
+import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.core.io.ClassPathResource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class DatabaseConfigurationTest {
     // Load real application config without starting JPA/Flyway or reading local secrets.
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
-            .withInitializer(new ConfigDataApplicationContextInitializer())
+            .withInitializer(context -> {
+                // Load only classpath YAML: ConfigData imports would also read the developer's .env.
+                var environment = context.getEnvironment();
+                environment.getPropertySources().remove("systemEnvironment");
+                environment.getPropertySources().remove("systemProperties");
+                var loader = new YamlPropertySourceLoader();
+                try {
+                    if ("integration".equals(environment.getProperty("spring.profiles.active"))) {
+                        loader.load("integration", new ClassPathResource("application-integration.yml"))
+                                .forEach(environment.getPropertySources()::addLast);
+                    }
+                    loader.load("application", new ClassPathResource("application.yml"))
+                            .forEach(environment.getPropertySources()::addLast);
+                } catch (java.io.IOException error) {
+                    throw new java.io.UncheckedIOException(error);
+                }
+            })
             .withPropertyValues("spring.config.import=",
                     "DB_URL=jdbc:postgresql://dev.invalid/dev", "DB_USERNAME=dev-role",
                     "DB_PASSWORD=dev-placeholder", "DB_POOL_SIZE=5");

@@ -6,6 +6,7 @@ from pathlib import Path
 
 import yaml
 from jsonschema import Draft202012Validator, FormatChecker
+from contract_semantics import validate_fixture_semantics
 
 ROOT = Path(__file__).resolve().parents[2]
 METHODS = {"get", "post", "put", "patch", "delete", "head", "options", "trace"}
@@ -82,11 +83,38 @@ def validate(contract_path, operations_path):
     for op in owners:
         if not (ROOT / "plan" / "modules" / (op["module"] + ".md")).is_file():
             errors.append(f"Missing module plan: {op['module']}")
+    semantic_checks, semantic_errors = validate_fixture_semantics(contract)
+    errors.extend(semantic_errors)
+    mirror = ROOT / 'backend/openapi.mobile.yaml'
+    if not mirror.exists() or mirror.read_bytes() != raw:
+        errors.append('backend/openapi.mobile.yaml differs from canonical contract; run backend/tools/sync_contract.py --write')
+    manifest = json.loads((ROOT / 'api-contract/examples/mock-media.json').read_text(encoding='utf-8'))
+    assets = {asset['assetId']: asset for asset in manifest['assets']}
+    media_examples = 0
+
+    def check_media(value):
+        nonlocal media_examples
+        if isinstance(value, dict):
+            if isinstance(value.get('assetId'), str) and {'url', 'mimeType', 'durationMs', 'expiresAt'} <= value.keys():
+                media_examples += 1
+                expected_asset = assets.get(value['assetId'])
+                fields = ('url', 'mimeType', 'durationMs', 'expiresAt')
+                if not expected_asset or any(value[field] != expected_asset[field] for field in fields):
+                    errors.append('Media fixture differs from manifest: ' + value['assetId'])
+            for child in value.values():
+                check_media(child)
+        elif isinstance(value, list):
+            for child in value:
+                check_media(child)
+
+    check_media(contract)
     return {
         "contractSha256": hashlib.sha256(raw).hexdigest(),
         "paths": len(contract["paths"]), "operations": len(operations), "schemas": len(schemas),
-        "httpExamplesChecked": examples, "errors": errors,
-        "scope": "Schema, references, examples and operation ownership only; not backend integration tests",
+        "httpExamplesChecked": examples, "semanticChecks": semantic_checks,
+        "mediaExamplesChecked": media_examples, "backendCopyMatches": mirror.exists() and mirror.read_bytes() == raw,
+        "errors": errors,
+        "scope": "Schema, references, fixture semantics and operation ownership; not backend integration tests",
     }
 
 

@@ -14,7 +14,9 @@ Spring được cấu hình đọc `.env` theo định dạng Java properties: `
 
 Dev dùng direct connection cho cả Hibernate và Flyway, với Hikari pool tối đa 5 connections. Nếu sau này dùng pooled URL cho app, đặt thêm `DB_MIGRATION_URL` là **direct URL của cùng database/branch**. Flyway dùng cùng role/password và URL này; không đi qua pooler. `DB_POOL_SIZE` tùy chỉnh pool của app.
 
-Flyway tự chạy khi khởi động: hiện V1 chỉ tạo schema `asl` và migration history ở `public`, chưa tạo 33 bảng trong bản thiết kế. Dùng database dev mới, role có quyền tạo schema/table; không chạy toàn bộ SQL thiết kế thủ công trước Flyway. Migration bảng sẽ bổ sung theo module. Phiên bản PostgreSQL thực tế do project Neon quyết định, không còn pin image Docker 18.6.
+Flyway tự chạy khi khởi động: V1 tạo schema `asl`; V2 tạo toàn bộ **33 bảng, 6 view, 17 function và 35 trigger**, cùng hai dòng cấu hình mobile/scoring. History ở `public`. V1/V2 đã áp dụng thành công lên Neon PostgreSQL 18.6 ngày 18/10/2026; chưa seed nội dung học. Xem [ADR-0009](../plan/adr/0009.md) và [đối chiếu SQL/contract](../db-design/ASL_Database_Contract_Review_mobile_v0_2.md).
+
+Với database mới, role cần quyền tạo schema/table và extension `pg_trgm`. Không chạy SQL thiết kế thủ công trước/sau Flyway. Không sửa V1/V2 đã áp dụng; mọi thay đổi tiếp theo dùng V3 trở đi. Các module dùng bảng sẵn có, triển khai entity/repository/API khi đến lượt.
 
 ## Chạy bằng Java 21 và Maven Wrapper
 
@@ -72,7 +74,16 @@ python tools/validate_contract.py --report ../plan/verification/contract-report.
 .\mvnw.cmd verify
 ```
 
-Profile `integration` chỉ ở test resources, dùng `TEST_DB_*` cho cả datasource và Flyway, không fallback sang `DB_*` của app. Thiếu cấu hình hoặc không kết nối được sẽ làm test thất bại, không tự skip. Test chạy migration thật, kiểm tra chạy lại Flyway, HTTP và health/readiness; test cuối đóng pool của chính tiến trình test để mô phỏng mất DB, không tắt Neon. Không có thao tác drop/clean database. Không dùng chung branch test cho nhiều lần chạy đồng thời. Hiện chưa xác minh kết nối Neon vì chưa có credentials.
+Profile `integration` chỉ ở test resources, dùng `TEST_DB_*` cho cả datasource và Flyway, không fallback sang `DB_*` của app. Thiếu cấu hình hoặc không kết nối được sẽ làm test thất bại, không tự skip. Test chạy migration thật, kiểm tra chạy lại Flyway, HTTP và health/readiness; test cuối đóng pool của chính tiến trình test để mô phỏng mất DB, không tắt Neon. Không có thao tác drop/clean database. Không dùng chung branch test cho nhiều lần chạy đồng thời. Suite này vẫn chờ cấu hình database test riêng; kết nối dev, migration V1/V2 và health/readiness trên Neon đã kiểm tra thực tế.
+
+Kiểm chứng schema bằng fixture contract, trên database dev/test chưa có lesson hoặc account:
+
+```powershell
+python -m pip install -r tools/database-requirements.txt
+python tools/verify_schema.py --env-file .env --report ../plan/verification/schema-installed-report.json
+```
+
+Script dùng direct URL và `DB_*` từ file/environment, thử ghi dữ liệu rồi **luôn rollback**, không lưu fixture. Tùy chọn `--trial` chỉ dùng trước migration trên database chưa có bảng `asl`: chạy V1/V2 trong transaction rollback, không tạo Flyway history. Không thay thế việc áp dụng migration bằng Spring Boot/Flyway. Script cần thư mục `api-contract` nằm cạnh backend để đọc examples. Kết quả chi tiết ở [verification](../plan/verification/README.md).
 
 Tham khảo: [Neon Java/JDBC](https://neon.com/docs/guides/java), [direct và pooled connections](https://neon.com/docs/connect/connection-pooling), [Spring Data JPA](https://spring.io/projects/spring-data-jpa/), [Spring config import](https://docs.spring.io/spring-boot/reference/features/external-config.html).
 
@@ -85,7 +96,7 @@ Module nằm tại `com.asl.backend.<module>`: `domain`, `application`, `adapter
 - Module khác chỉ dùng `application.api` (interface và kiểu dữ liệu API); không dùng HTTP DTO hoặc JPA entity của nhau.
 - `configuration`: Spring wiring; adapter transaction bao quanh use case, không thêm `@Transactional` vào application.
 - `platform`: các adapter dùng chung cho HTTP; không trở thành nơi gom domain nghiệp vụ.
-- Flyway giữ history trong `public`; dữ liệu nghiệp vụ ở `asl`. Migration thêm theo module, không sửa migration đã chạy. Hibernate chỉ validate.
+- Flyway giữ history trong `public`; dữ liệu nghiệp vụ ở `asl`. V2 là baseline đầy đủ; migration tiếp theo thêm khi cần thay đổi schema, không sửa migration đã chạy. Hibernate chỉ validate.
 
 Request ID do server sinh UUID, trả ở `X-Request-Id` và error body, dùng trong MDC. Validation payload trả 422; JSON/query sai trả 400. Body có field lạ bị từ chối. Các lỗi HTTP giao thức giữ status tương ứng; lỗi không dự kiến trả 500, không lộ stack trace qua response.
 
