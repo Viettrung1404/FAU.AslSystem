@@ -48,3 +48,10 @@ management:
 logging:
   pattern:
     level: '%5p [requestId=%X{requestId:-}]'
+asl:
+  media:
+    public-base-url: ${MEDIA_PUBLIC_BASE_URL:}
+    rate-limit:
+      requests: ${MEDIA_RATE_LIMIT_REQUESTS:120}
+      window: ${MEDIA_RATE_LIMIT_WINDOW:PT1M}
+      max-clients: ${MEDIA_RATE_LIMIT_MAX_CLIENTS:10000}

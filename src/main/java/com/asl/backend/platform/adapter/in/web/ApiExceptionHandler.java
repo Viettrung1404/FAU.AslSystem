@@ -17,6 +17,19 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 public class ApiExceptionHandler {
     private static final Logger LOG = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
+    @ExceptionHandler(com.asl.backend.platform.application.api.ApplicationFailure.class)
+    ResponseEntity<Map<String, Object>> applicationFailure(
+            com.asl.backend.platform.application.api.ApplicationFailure failure, HttpServletRequest request) {
+        int status = switch (failure.kind()) {
+            case INVALID_INPUT -> 422;
+            case NOT_FOUND -> 404;
+            case REMOVED -> 410;
+            case UNAVAILABLE -> 503;
+            case RATE_LIMITED -> 429;
+        };
+        return ApiErrors.response(status, failure.code(), failure.getMessage(), request, List.of());
+    }
+
     @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class,
             org.springframework.web.bind.MissingServletRequestParameterException.class})
     ResponseEntity<Map<String, Object>> badRequest(Exception exception, HttpServletRequest request) {
