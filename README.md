@@ -1,6 +1,6 @@
 # Nền móng backend ASL
 
-Java 21, Spring Boot 4.1.1, PostgreSQL trên Neon; chạy bằng Maven Wrapper, không cần Docker. Chưa triển khai 35 operations nghiệp vụ; xem [kế hoạch](../plan/README.md) và [ADR-0008](../plan/adr/0008.md).
+Java 21, Spring Boot 4.1.1, PostgreSQL trên Neon; chạy bằng Maven Wrapper, không cần Docker. Đã triển khai module 01-media (`POST /api/v1/media/urls`); 34 operations còn lại theo [kế hoạch](../plan/README.md). Xem [ADR-0008](../plan/adr/0008.md).
 
 ## Chuẩn bị Neon
 
@@ -61,7 +61,7 @@ Có thể đổi nơi xuất bằng `python tools/export_schema.py --output sche
 
 ## ORM: Spring Data JPA + Hibernate
 
-`pom.xml` đã có `spring-boot-starter-data-jpa`, Hibernate và PostgreSQL JDBC driver. Chưa có entity/repository nghiệp vụ vì các module chưa triển khai. Giữ bộ này cho ASL:
+`pom.xml` đã có `spring-boot-starter-data-jpa`, Hibernate và PostgreSQL JDBC driver. Module media đã có entity/projection repository trên bảng V2; các module khác bổ sung khi triển khai. Giữ bộ này cho ASL:
 
 | Vai trò | Trong dự án Spring Boot |
 |---|---|
@@ -89,7 +89,7 @@ python tools/validate_contract.py --report ../plan/verification/contract-report.
 .\mvnw.cmd verify
 ```
 
-Profile `integration` chỉ ở test resources, dùng `TEST_DB_*` cho cả datasource và Flyway, không fallback sang `DB_*` của app. Thiếu cấu hình hoặc không kết nối được sẽ làm test thất bại, không tự skip. Test chạy migration thật, kiểm tra chạy lại Flyway, HTTP và health/readiness; test cuối đóng pool của chính tiến trình test để mô phỏng mất DB, không tắt Neon. Không có thao tác drop/clean database. Không dùng chung branch test cho nhiều lần chạy đồng thời. Suite này vẫn chờ cấu hình database test riêng; kết nối dev, migration V1/V2 và health/readiness trên Neon đã kiểm tra thực tế.
+Profile `integration` chỉ ở test resources, dùng `TEST_DB_*` cho cả datasource và Flyway, không fallback sang `DB_*` của app. Thiếu cấu hình hoặc không kết nối được sẽ làm test thất bại, không tự skip. Test chạy migration thật, kiểm tra chạy lại Flyway, HTTP và health/readiness; test cuối FoundationIT đóng pool của chính tiến trình test để mô phỏng mất DB, không tắt Neon. Bản thân suite không drop/clean database; MediaIT giữ fixture trên database test và dùng ID ngẫu nhiên để chạy lại. Không dùng chung branch/database test cho nhiều lần chạy đồng thời. Ngày 21/10/2026, FoundationIT và MediaIT đã PASS trên database Neon tạm riêng; database tạm của phiên kiểm chứng đã được dọn. MediaIT có test tải byte từ Pocket Sign, cần mạng ra ngoài và phụ thuộc availability nguồn development này.
 
 Kiểm chứng schema bằng fixture contract, trên database dev/test chưa có lesson hoặc account:
 
@@ -115,4 +115,30 @@ Module nằm tại `com.asl.backend.<module>`: `domain`, `application`, `adapter
 
 Request ID do server sinh UUID, trả ở `X-Request-Id` và error body, dùng trong MDC. Validation payload trả 422; JSON/query sai trả 400. Body có field lạ bị từ chối. Các lỗi HTTP giao thức giữ status tương ứng; lỗi không dự kiến trả 500, không lộ stack trace qua response.
 
-Health/readiness là endpoint vận hành ngoài contract mobile. Liveness không phụ thuộc DB; readiness có DB. Chỉ public health, không expose env/config/metrics. Chưa có auth/business controllers.
+Health/readiness là endpoint vận hành ngoài contract mobile. Liveness không phụ thuộc DB; readiness có DB. Chỉ public health, không expose env/config/metrics. Media controller public, chưa triển khai auth.
+
+## Module 01-media
+
+`POST /api/v1/media/urls` nhận `{"assetIds":["UUID"]}` không cần đăng nhập. Danh sách có 1–100 UUID duy nhất; response trả `items` gồm assetId, url, expiresAt, mimeType, durationMs. Một ID không khả dụng làm toàn bộ batch thất bại: missing/draft/future 404, revoked 410. JSON/field lạ trả 400; validation trả 422; rate limit 429; lỗi provider/DB tạm thời 503. Response của operation dùng `Cache-Control: no-store`.
+
+| Cấu hình | Mặc định | Ý nghĩa |
+|---|---|---|
+| `MEDIA_PUBLIC_BASE_URL` | Rỗng | HTTPS origin/prefix của public CDN; thiếu cấu hình trả 503 khi cần cấp URL |
+| `MEDIA_RATE_LIMIT_REQUESTS` | `120` | Số request trên mỗi địa chỉ socket trong một cửa sổ, mỗi instance |
+| `MEDIA_RATE_LIMIT_WINDOW` | `PT1M` | Duration của cửa sổ rate limit |
+| `MEDIA_RATE_LIMIT_MAX_CLIENTS` | `10000` | Số IP tối đa đang được theo dõi; khi đầy, IP mới nhận 429 |
+
+Storage key trong `asl.media_assets` là đường dẫn tương đối với base URL, không phải URL do client gửi. Adapter encode từng segment, chặn traversal/URL tuyệt đối và cấu hình `.invalid`. Public URL có `expiresAt=null`; có thể thay provider qua `MediaUrlProvider` để ký URL với expiry thật. Không HEAD/download mỗi request. Revoke DB chặn lần refresh tiếp theo; muốn vô hiệu URL public đã cấp phải thu hồi bytes tại CDN.
+
+Các module xuất bản gọi `MediaApi.publish(assetId)` sau khi metadata/bytes/rights đã được chuẩn bị; gọi `revoke(assetId)` để thu hồi vĩnh viễn. Cả hai idempotent và tham gia transaction của caller. Media không truy vấn catalog/learning/collection membership. Chưa có CMS/importer/upload API, và ứng dụng không tự seed dữ liệu dev vào DB.
+
+Fixture `hello.mp4` trong MediaIT dẫn nguồn manifest/Pocket Sign, checksum lấy từ byte mẫu đã kiểm tra. Những row khác chỉ là metadata tổng hợp cho test. Không coi link development là giấy phép production. Khi chạy thật, cấu hình CDN và chuẩn bị asset có quyền sử dụng; không điền một origin giả để vượt lỗi 503.
+
+Chạy kiểm chứng từ workspace root sau `mvnw.cmd verify` trong `backend` với database test riêng:
+
+```powershell
+python -X utf8 backend/tools/verify_media_responses.py --report plan/verification/media-contract-report.json
+python -X utf8 backend/tools/validate_contract.py --report plan/verification/contract-report.json
+```
+
+`mvnw.cmd test` chạy unit/HTTP/ArchUnit không cần DB. `verify` thêm migration/JPA/transaction/concurrency, HTTP thật và tải media. Công cụ conformance đọc response thực tế trong `backend/target/media-http`; thiếu capture sẽ fail. Xem [ADR-0011](../plan/adr/0011.md) và [báo cáo nghiệm thu](../plan/verification/01-media.md).
