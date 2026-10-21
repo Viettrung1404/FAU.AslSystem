@@ -44,6 +44,21 @@ $env:Path = "$env:JAVA_HOME/bin;$env:Path"
 
 Thư mục portable này không được phân phối cùng source; máy khác tự cài JDK 21. Đóng gói bằng `.\mvnw.cmd package`, chạy bằng `java -jar target/backend-0.1.0-SNAPSHOT.jar` từ thư mục `backend` để đọc cùng `.env`.
 
+## Xuất schema thật để chia sẻ trong nhóm
+
+File `schema.sql` trong thư mục `backend` là snapshot cấu trúc lấy trực tiếp từ database được cấu hình trong `.env`: schema `asl` và `public`, gồm bảng, view, function, trigger, constraint, index và extension `pg_trgm` dùng cho tìm kiếm. Không xuất dữ liệu bảng, mật khẩu, owner hoặc quyền của tài khoản nguồn. Cấu trúc bảng `public.flyway_schema_history` có trong snapshot, nhưng không có các dòng lịch sử migration. Bản xuất ngày 21/10/2026 có 33 bảng nghiệp vụ + 1 bảng lịch sử, 6 view, 17 function và 35 trigger.
+
+Chạy lại từ thư mục `backend`:
+
+```powershell
+python -m pip install -r tools/database-requirements.txt
+python -X utf8 tools/export_schema.py
+```
+
+Script ưu tiên `DB_MIGRATION_URL` (direct connection), sau đó mới dùng `DB_URL`. Đọc username/password từ `.env` hoặc biến môi trường; không đưa mật khẩu vào tham số lệnh. Script chỉ đọc database và ghi đè file snapshot khi `pg_dump` thành công. Cần PostgreSQL client 18 trở lên trên PATH; workspace này có bản portable tại `../.tools/postgresql18/pg_dump.exe`. Máy khác tự cài client hoặc truyền `--pg-dump "C:\path\to\pg_dump.exe"`.
+
+Có thể đổi nơi xuất bằng `python tools/export_schema.py --output schema-latest.sql`. Chia sẻ `schema.sql` cùng migrations và hướng dẫn nghiệp vụ cho agent đồng đội. Snapshot dùng để đọc/đối chiếu; khi dựng database backend mới, chạy Flyway qua ứng dụng như phần trên. Không import snapshot vào database đã có bảng; không dùng snapshot thay cho migration hoặc lịch sử Flyway.
+
 ## ORM: Spring Data JPA + Hibernate
 
 `pom.xml` đã có `spring-boot-starter-data-jpa`, Hibernate và PostgreSQL JDBC driver. Chưa có entity/repository nghiệp vụ vì các module chưa triển khai. Giữ bộ này cho ASL:
