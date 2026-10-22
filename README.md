@@ -1,6 +1,6 @@
 # Nền móng backend ASL
 
-Java 21, Spring Boot 4.1.1, PostgreSQL trên Neon; chạy bằng Maven Wrapper, không cần Docker. Đã triển khai module 01-media (`POST /api/v1/media/urls`); 34 operations còn lại theo [kế hoạch](../plan/README.md). Xem [ADR-0008](../plan/adr/0008.md).
+Java 21, Spring Boot 4.1.1, PostgreSQL trên Neon; chạy bằng Maven Wrapper, không cần Docker. Đã triển khai module 01-media và 02-catalog (5 operations); 30 operations còn lại theo [kế hoạch](../plan/README.md). Xem [ADR-0008](../plan/adr/0008.md).
 
 ## Chuẩn bị Neon
 
@@ -102,6 +102,8 @@ Script dùng direct URL và `DB_*` từ file/environment, thử ghi dữ liệu 
 
 Tham khảo: [Neon Java/JDBC](https://neon.com/docs/guides/java), [direct và pooled connections](https://neon.com/docs/connect/connection-pooling), [Spring Data JPA](https://spring.io/projects/spring-data-jpa/), [Spring config import](https://docs.spring.io/spring-boot/reference/features/external-config.html).
 
+Cập nhật kiểm chứng 22/10/2026: `verify` đạt 94 tests, gồm 21 integration tests của FoundationIT, MediaIT, CatalogIT và CatalogDevelopmentIT trên database Neon tạm riêng. Riêng catalog có 32 tests. Database tạm đã dọn sau phiên kiểm chứng; Maven suite không tự tạo/drop database. MediaIT và catalog integration dùng fixtures tổng hợp trên database test riêng; không dùng database dev hoặc chạy nhiều suite đồng thời trên cùng database. Xem [báo cáo catalog](../plan/verification/02-catalog.md).
+
 ## Quy ước kiến trúc
 
 Module nằm tại `com.asl.backend.<module>`: `domain`, `application`, `adapter.in.web`, `adapter.out.persistence`, `configuration`. Chỉ tạo lớp khi có use case; không tạo hàng loạt placeholder.
@@ -142,3 +144,30 @@ python -X utf8 backend/tools/validate_contract.py --report plan/verification/con
 ```
 
 `mvnw.cmd test` chạy unit/HTTP/ArchUnit không cần DB. `verify` thêm migration/JPA/transaction/concurrency, HTTP thật và tải media. Công cụ conformance đọc response thực tế trong `backend/target/media-http`; thiếu capture sẽ fail. Xem [ADR-0011](../plan/adr/0011.md) và [báo cáo nghiệm thu](../plan/verification/01-media.md).
+
+## Module 02-catalog
+
+Bốn GET public: `/api/v1/config`, `/api/v1/home`, `/api/v1/units`, `/api/v1/units/{unitId}`. Config đọc policy thật từ `app_settings`, không thêm quota học. Home/Units dùng cùng page và cursor, mặc định limit 20, tối đa 100; sắp theo position rồi UUID, trang cuối `nextCursor=null`. Cursor ký HMAC, ràng buộc scope/sort/chế độ prerequisite; có thể đổi limit giữa các trang. Cursor không bảo đảm snapshot xuyên request khi thứ tự dữ liệu thay đổi.
+
+| Cấu hình | Mặc định | Ý nghĩa |
+|---|---|---|
+| `ASL_LESSON_PREREQUISITES_ENABLED` | `true`; profile dev `false` | False trả prerequisite rỗng trên cả ba endpoint, giữ nguyên dữ liệu DB |
+| `ASL_SUPPORT_URL` | Rỗng; `.env.example` dùng `https://example.com` | HTTPS URL cho config; dev placeholder được người dùng cho phép, thay bằng trang hỗ trợ thật trước production |
+| `ASL_CATALOG_CURSOR_SECRET` | Rỗng | Secret ít nhất 32 byte; cùng giá trị trên mọi instance |
+| `ASL_CATALOG_RATE_LIMIT_REQUESTS` | `120` | Số request mỗi socket IP mỗi cửa sổ, dùng chung bốn GET trên từng instance |
+| `ASL_CATALOG_RATE_LIMIT_WINDOW` | `PT1M` | Duration cửa sổ rate limit |
+| `ASL_CATALOG_RATE_LIMIT_MAX_CLIENTS` | `10000` | Số IP được theo dõi; đầy thì IP mới nhận 429 |
+
+Workspace dev đã đặt prerequisite false, support URL tượng trưng và tạo cursor secret riêng trong `.env`. Không đưa secret vào source. Thiếu/sai support URL hoặc policy DB trả 503 cho config; thiếu cursor secret trả 503 khi cần phát/đọc cursor. Đổi key hoặc chế độ prerequisite làm cursor cũ không còn hợp lệ; bắt đầu lại ở trang đầu sau đổi cấu hình và restart ứng dụng.
+
+Query lạ/lặp, limit/cursor/UUID sai trả 400; unit missing/unpublished/retired trả 404; rate limit trả 429 kèm Retry-After; DB tạm lỗi trả 503. Tất cả response catalog dùng `Cache-Control: no-store`. Limiter không tin X-Forwarded-For; deployment qua proxy/nhiều instance cần chính sách tương ứng ở gateway.
+
+Catalog đọc unit/reference/prerequisite và gọi `learning.application.api.LessonSummaryReader` để lấy metadata của current published version chưa revoked; không fallback sang version cũ. JDBC catalog và JPA learning dùng chung datasource trong transaction read-only REPEATABLE_READ. Đây là API đọc tối thiểu phục vụ catalog; endpoint nội dung module 03 chưa triển khai. Catalog không đọc account/progress hoặc thêm presentation/media fields ngoài contract. Không cần migration mới hay seed giáo trình khi triển khai module này.
+
+Sau `mvnw.cmd verify`, chạy từ workspace root:
+
+```powershell
+python -X utf8 backend/tools/verify_catalog_responses.py --report plan/verification/catalog-contract-report.json
+```
+
+Công cụ kiểm tra captures thật trong `backend/target/catalog-http` theo OpenAPI và fail nếu thiếu response bắt buộc. Chi tiết TDD, 27 captures và giới hạn nghiệm thu tại [báo cáo](../plan/verification/02-catalog.md), quyết định tại [ADR-0012](../plan/adr/0012.md).

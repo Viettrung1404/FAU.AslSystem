@@ -21,6 +21,7 @@ public class ApiExceptionHandler {
     ResponseEntity<Map<String, Object>> applicationFailure(
             com.asl.backend.platform.application.api.ApplicationFailure failure, HttpServletRequest request) {
         int status = switch (failure.kind()) {
+            case BAD_REQUEST -> 400;
             case INVALID_INPUT -> 422;
             case NOT_FOUND -> 404;
             case REMOVED -> 410;

@@ -97,6 +97,50 @@ class MediaServiceTest {
         assertCode("SERVICE_UNAVAILABLE", () -> service().refresh(List.of(first.id(), second.id())));
     }
 
+    @Test void rejectsAnEarlierUrlThatExpiresWhileTheRestOfTheBatchIsDelivered() {
+        var clock = new MediaHttpPolicyTest.MutableClock();
+        var first = asset("video/mp4", 1, NOW, null);
+        var second = asset("video/mp4", 1, NOW, null);
+        provider = key -> {
+            if (key.equals(second.storageKey())) clock.now = NOW.plusSeconds(11);
+            return new MediaUrlProvider.Delivery(URI.create("https://cdn.example.org/clip.mp4"),
+                    key.equals(first.storageKey()) ? NOW.plusSeconds(10) : clock.instant().plusSeconds(60));
+        };
+        var api = new MediaService(repository, provider, clock);
+        assertCode("SERVICE_UNAVAILABLE", () -> api.refresh(List.of(first.id(), second.id())));
+    }
+
+    @Test void rejectsSignedUrlsWithInsufficientTimeForTheClient() {
+        var asset = asset("video/mp4", 1, NOW, null);
+        provider = key -> new MediaUrlProvider.Delivery(URI.create("https://cdn.example.org/clip.mp4"), NOW.plusSeconds(4));
+        assertCode("SERVICE_UNAVAILABLE", () -> service().refresh(List.of(asset.id())));
+    }
+
+    @Test void providerFailureRetainsItsInternalCauseWithoutExposingItInTheMessage() {
+        var asset = asset("video/mp4", 1, NOW, null);
+        var outage = new MediaUrlProvider.Unavailable("secret provider details");
+        provider = key -> { throw outage; };
+        assertThatThrownBy(() -> service().refresh(List.of(asset.id())))
+                .isInstanceOf(ApplicationFailure.class).hasCause(outage)
+                .hasMessage("Media delivery unavailable");
+    }
+
+    @Test void minimumRemainingTtlIsConfigurableAndPublicUrlsRemainUnaffected() {
+        var asset = asset("video/mp4", 1, NOW, null);
+        provider = key -> new MediaUrlProvider.Delivery(URI.create("https://cdn.example.org/clip.mp4"), NOW.plusSeconds(15));
+        assertThat(new MediaService(repository, provider, Clock.fixed(NOW, ZoneOffset.UTC), Duration.ofSeconds(15))
+                .refresh(List.of(asset.id()))).hasSize(1);
+        assertCode("SERVICE_UNAVAILABLE", () -> new MediaService(repository, provider,
+                Clock.fixed(NOW, ZoneOffset.UTC), Duration.ofSeconds(16)).refresh(List.of(asset.id())));
+        provider = key -> new MediaUrlProvider.Delivery(URI.create("https://cdn.example.org/clip.mp4"), null);
+        assertThat(new MediaService(repository, provider, Clock.fixed(NOW, ZoneOffset.UTC), Duration.ofMinutes(5))
+                .refresh(List.of(asset.id()))).singleElement().satisfies(item -> assertThat(item.expiresAt()).isNull());
+        for (Duration invalid : Arrays.asList(null, Duration.ZERO, Duration.ofSeconds(-1))) {
+            assertThatThrownBy(() -> new MediaService(repository, provider, Clock.systemUTC(), invalid))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
     @Test void publishAndRevokeAreIdempotentAndRevokeIsTerminal() {
         var draft = asset("video/mp4", 1, null, null);
         var api = service();
