@@ -1,7 +1,10 @@
 package com.asl.backend.media;
 
 import com.asl.backend.media.application.api.MediaApi;
+import com.asl.backend.media.application.MediaService;
+import com.asl.backend.media.adapter.in.transaction.TransactionalMediaApi;
 import com.asl.backend.media.application.port.out.AssetRepository;
+import com.asl.backend.media.application.port.out.MediaUrlProvider;
 import com.asl.backend.platform.application.api.ApplicationFailure;
 import java.net.URI;
 import java.net.http.*;
@@ -13,10 +16,12 @@ import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import tools.jackson.databind.json.JsonMapper;
 import static org.assertj.core.api.Assertions.*;
 
@@ -45,15 +50,64 @@ class MediaIT {
         assertCode("MEDIA_NOT_FOUND", () -> api.refresh(List.of(id)));
         api.publish(id);
         Instant first = repository.findAll(List.of(id)).getFirst().publishedAt();
+        String publishedVersion = rowVersion(id);
         api.publish(id);
         assertThat(repository.findAll(List.of(id)).getFirst().publishedAt()).isEqualTo(first);
+        assertThat(rowVersion(id)).isEqualTo(publishedVersion);
         assertThat(api.refresh(List.of(id))).hasSize(1);
         api.revoke(id);
         Instant revoked = repository.findAll(List.of(id)).getFirst().revokedAt();
+        String revokedVersion = rowVersion(id);
         api.revoke(id);
         assertThat(repository.findAll(List.of(id)).getFirst().revokedAt()).isEqualTo(revoked);
+        assertThat(rowVersion(id)).isEqualTo(revokedVersion);
         assertCode("MEDIA_REMOVED", () -> api.refresh(List.of(id)));
         assertCode("MEDIA_REMOVED", () -> api.publish(id));
+    }
+
+    @Test void missingAssetsCannotBePublishedOrRevoked() {
+        UUID missing = UUID.randomUUID();
+        assertCode("MEDIA_NOT_FOUND", () -> api.publish(missing));
+        assertCode("MEDIA_NOT_FOUND", () -> api.revoke(missing));
+    }
+
+    @Test void deliveryRunsAfterStandaloneRepositoryTransactionHasEnded() {
+        UUID id = insert("video/mp4", 1, "transaction/" + UUID.randomUUID() + ".mp4");
+        api.publish(id);
+        var service = new MediaService(repository, key -> {
+            assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
+            return new MediaUrlProvider.Delivery(URI.create("https://cdn.example.test/" + key), null);
+        }, Clock.systemUTC());
+        assertThat(new TransactionalMediaApi(service, transactions).refresh(List.of(id))).hasSize(1);
+    }
+
+    @Test void repeatedPublicationKeepsCallerTransactionLockWithoutRewritingRow() {
+        UUID id = insert("video/mp4", 1, "lock/" + UUID.randomUUID() + ".mp4");
+        api.publish(id);
+        String originalVersion = rowVersion(id);
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            new TransactionTemplate(transactions).executeWithoutResult(status -> {
+                api.publish(id);
+                // Another transaction cannot acquire the lock needed to revoke while
+                // the publisher is still committing its related content changes.
+                var contender = executor.submit(() -> {
+                    assertThatThrownBy(() -> new TransactionTemplate(transactions).execute(other ->
+                            jdbc.queryForObject("select id from asl.media_assets where id = ? for update nowait",
+                                    UUID.class, id))).isInstanceOf(DataAccessException.class)
+                            .satisfies(failure -> {
+                                Throwable root = failure;
+                                while (root.getCause() != null) root = root.getCause();
+                                assertThat(root).isInstanceOf(java.sql.SQLException.class);
+                                assertThat(((java.sql.SQLException) root).getSQLState()).isEqualTo("55P03");
+                            });
+                });
+                assertThatCode(() -> contender.get(30, TimeUnit.SECONDS)).doesNotThrowAnyException();
+                assertThat(rowVersion(id)).isEqualTo(originalVersion);
+            });
+        }
+        assertThat(rowVersion(id)).isEqualTo(originalVersion);
+        api.revoke(id);
+        assertCode("MEDIA_REMOVED", () -> api.refresh(List.of(id)));
     }
 
     @Test void publicationParticipatesInCallerTransactionRollback() {
@@ -131,6 +185,11 @@ class MediaIT {
                 key.equals("hello.mp4") ? "Development link: https://www.pocketsign.org/asl/hello; not a production license"
                         : "Synthetic test metadata; no corresponding production asset");
         return id;
+    }
+
+    private String rowVersion(UUID id) {
+        return jdbc.queryForObject("select xmin::text || ':' || ctid::text from asl.media_assets where id = ?",
+                String.class, id);
     }
 
     private HttpResponse<String> post(UUID id) throws Exception {

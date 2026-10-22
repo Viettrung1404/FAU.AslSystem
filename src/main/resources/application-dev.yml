@@ -1,0 +1,3 @@
+asl:
+  catalog:
+    lesson-prerequisites-enabled: ${ASL_LESSON_PREREQUISITES_ENABLED:false}

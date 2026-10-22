@@ -8,5 +8,9 @@ public interface MediaUrlProvider {
     record Delivery(URI url, Instant expiresAt) { }
     class Unavailable extends RuntimeException {
         public Unavailable(String message) { super(message); }
+        public Unavailable(String message, Throwable cause) { super(message, cause); }
+    }
+    class InvalidDelivery extends Unavailable {
+        public InvalidDelivery() { super("Invalid media delivery"); }
     }
 }
