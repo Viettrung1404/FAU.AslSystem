@@ -42,7 +42,7 @@ class FoundationIT {
     }
 
     @Test void businessEndpointsAreNotStubbed() throws Exception {
-        var response = get("/api/v1/config");
+        var response = get("/api/v1/signs");
         assertThat(response.statusCode()).isEqualTo(404);
         assertThat(response.body()).contains("\"error\"", "\"requestId\"");
     }

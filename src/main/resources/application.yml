@@ -49,8 +49,17 @@ logging:
   pattern:
     level: '%5p [requestId=%X{requestId:-}]'
 asl:
+  catalog:
+    lesson-prerequisites-enabled: ${ASL_LESSON_PREREQUISITES_ENABLED:true}
+    support-url: ${ASL_SUPPORT_URL:}
+    cursor-secret: ${ASL_CATALOG_CURSOR_SECRET:}
+    rate-limit:
+      requests: ${ASL_CATALOG_RATE_LIMIT_REQUESTS:120}
+      window: ${ASL_CATALOG_RATE_LIMIT_WINDOW:PT1M}
+      max-clients: ${ASL_CATALOG_RATE_LIMIT_MAX_CLIENTS:10000}
   media:
     public-base-url: ${MEDIA_PUBLIC_BASE_URL:}
+    minimum-remaining-ttl: ${MEDIA_MIN_REMAINING_TTL:PT5S}
     rate-limit:
       requests: ${MEDIA_RATE_LIMIT_REQUESTS:120}
       window: ${MEDIA_RATE_LIMIT_WINDOW:PT1M}
