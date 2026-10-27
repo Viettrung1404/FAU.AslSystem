@@ -1,3 +1,8 @@
+asl:
+  catalog:
+    lesson-prerequisites-enabled: true
+  media:
+    development-fixtures: false
 spring:
   config:
     import: optional:file:.env.test[.properties]

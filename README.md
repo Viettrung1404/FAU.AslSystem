@@ -1,6 +1,6 @@
 # Nền móng backend ASL
 
-Java 21, Spring Boot 4.1.1, PostgreSQL trên Neon; chạy bằng Maven Wrapper, không cần Docker. Đã triển khai module 01-media và 02-catalog (5 operations); 30 operations còn lại theo [kế hoạch](../plan/README.md). Xem [ADR-0008](../plan/adr/0008.md).
+Java 21, Spring Boot 4.1.1, PostgreSQL trên Neon; chạy bằng Maven Wrapper, không cần Docker. Đã triển khai media, catalog và learning-content (6 operations); 29 operations còn lại theo [kế hoạch](../plan/README.md). Xem [ADR-0008](../plan/adr/0008.md).
 
 ## Chuẩn bị Neon
 
@@ -14,7 +14,7 @@ Spring được cấu hình đọc `.env` theo định dạng Java properties: `
 
 Dev dùng direct connection cho cả Hibernate và Flyway, với Hikari pool tối đa 5 connections. Nếu sau này dùng pooled URL cho app, đặt thêm `DB_MIGRATION_URL` là **direct URL của cùng database/branch**. Flyway dùng cùng role/password và URL này; không đi qua pooler. `DB_POOL_SIZE` tùy chỉnh pool của app.
 
-Flyway tự chạy khi khởi động: V1 tạo schema `asl`; V2 tạo toàn bộ **33 bảng, 6 view, 17 function và 35 trigger**, cùng hai dòng cấu hình mobile/scoring. History ở `public`. V1/V2 đã áp dụng thành công lên Neon PostgreSQL 18.6 ngày 18/10/2026; chưa seed nội dung học. Xem [ADR-0009](../plan/adr/0009.md) và [đối chiếu SQL/contract](../db-design/ASL_Database_Contract_Review_mobile_v0_2.md).
+Flyway tự chạy khi khởi động: V1 tạo schema `asl`; V2 tạo toàn bộ **33 bảng, 6 view, 17 function và 35 trigger**, cùng hai dòng cấu hình mobile/scoring. History ở `public`. V1/V2 đã áp dụng lên Neon PostgreSQL 18.6; ngày 25/10/2026 đã seed riêng 4 lesson demo theo yêu cầu. Seed không nằm trong migration. Xem [ADR-0009](../plan/adr/0009.md) và [đối chiếu SQL/contract](../db-design/ASL_Database_Contract_Review_mobile_v0_2.md).
 
 Với database mới, role cần quyền tạo schema/table và extension `pg_trgm`. Không chạy SQL thiết kế thủ công trước/sau Flyway. Không sửa V1/V2 đã áp dụng; mọi thay đổi tiếp theo dùng V3 trở đi. Các module dùng bảng sẵn có, triển khai entity/repository/API khi đến lượt.
 
@@ -171,3 +171,52 @@ python -X utf8 backend/tools/verify_catalog_responses.py --report plan/verificat
 ```
 
 Công cụ kiểm tra captures thật trong `backend/target/catalog-http` theo OpenAPI và fail nếu thiếu response bắt buộc. Chi tiết TDD, 27 captures và giới hạn nghiệm thu tại [báo cáo](../plan/verification/02-catalog.md), quyết định tại [ADR-0012](../plan/adr/0012.md).
+
+
+## Module 03-learning-content
+
+`GET /api/v1/lessons/{lessonId}` is public. Omit `versionId` for current content;
+resume with the saved `versionId`. Returns full sign snapshots, 13 discriminated
+exercise types with answer keys, or ordered conversation turns, plus scoring policy.
+Unknown/draft/future versions return 404; explicitly revoked versions return 410
+`CONTENT_VERSION_RETIRED`. Prerequisites never gate this API. Responses use no-store;
+malformed/unknown/repeated query parameters return 400. The bounded per-socket-IP
+limiter defaults to 120 requests/minute and 10,000 clients (`asl.learning.rate-limit`).
+Database/transaction failures return 503. `LearningApi.publish/revoke` are internal
+application APIs; there is no public authoring endpoint. Existing SQL triggers retain
+immutable published versions. No new migration is needed.
+
+For an empty development database, after running Flyway through the app:
+
+```powershell
+python -m pip install -r tools/database-requirements.txt
+python -X utf8 tools/seed_learning.py
+```
+
+The explicit seed is transactional and idempotent. It installs four demo lessons
+(LESSON, ALPHABET, REVIEW, CONVERSATION), all 13 exercise types, and research media
+from the existing contract manifest, with downloaded SHA-256 checksums. It never
+replaces published content and is not run by startup or migration. These are
+**development fixtures**, not production curriculum or licensed production media.
+
+To serve these fixture URLs, put the following in the local ignored `.env`:
+
+```properties
+spring.profiles.active=dev
+ASL_MEDIA_DEVELOPMENT_FIXTURES=true
+```
+
+Both settings are required. Other profiles refuse the development media opt-in;
+production assets still use `MEDIA_PUBLIC_BASE_URL`. Integration explicitly disables
+the fixture provider and runs against `TEST_DB_*` on a separate database. The existing
+workspace dev database has already been seeded; running the command again reports
+UNCHANGED. No real user's progress was seeded.
+
+After `mvnw.cmd verify`, check captured responses:
+
+```powershell
+python -X utf8 tools/verify_learning_responses.py --report ../plan/verification/learning-contract-report.json
+```
+
+The final backend verification passed 107 tests (81 unit/HTTP/architecture + 26
+integration). See [module verification](../plan/verification/03-learning-content.md).

@@ -1,0 +1,74 @@
+[
+  {
+    "assetId": "3a0cd01b-5ff3-51af-b6fc-a2f7bcc11313",
+    "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+    "expiresAt": null,
+    "mimeType": "video/mp4",
+    "durationMs": 2280,
+    "sourcePage": "https://www.pocketsign.org/asl/hello"
+  },
+  {
+    "assetId": "29db2af0-0fef-5308-914b-f7ef52cf6592",
+    "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/goodbye.mp4",
+    "expiresAt": null,
+    "mimeType": "video/mp4",
+    "durationMs": 2360,
+    "sourcePage": "https://www.pocketsign.org/asl/goodbye"
+  },
+  {
+    "assetId": "b1d1560a-526c-5f41-9918-97cc2b127ef6",
+    "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+    "expiresAt": null,
+    "mimeType": "video/mp4",
+    "durationMs": 2280,
+    "sourcePage": "https://www.pocketsign.org/asl/hello"
+  },
+  {
+    "assetId": "f4c0a7c5-6c03-5c47-90b4-186d902e1eac",
+    "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+    "expiresAt": null,
+    "mimeType": "video/mp4",
+    "durationMs": 2280,
+    "sourcePage": "https://www.pocketsign.org/asl/hello"
+  },
+  {
+    "assetId": "90c83b92-7567-5d6e-a1c8-ffec44c27b3f",
+    "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/goodbye.mp4",
+    "expiresAt": null,
+    "mimeType": "video/mp4",
+    "durationMs": 2360,
+    "sourcePage": "https://www.pocketsign.org/asl/goodbye"
+  },
+  {
+    "assetId": "a7b274aa-f97e-534c-8dff-d7367c8c0506",
+    "url": "https://mobireactoraslresize.s3-us-west-2.amazonaws.com/thumbnails/hello.png",
+    "expiresAt": null,
+    "mimeType": "image/png",
+    "durationMs": null,
+    "sourcePage": "https://www.pocketsign.org/asl/hello"
+  },
+  {
+    "assetId": "24022045-c167-5b09-b222-4174db371dd6",
+    "url": "https://mobireactoraslresize.s3-us-west-2.amazonaws.com/thumbnails/goodbye.png",
+    "expiresAt": null,
+    "mimeType": "image/png",
+    "durationMs": null,
+    "sourcePage": "https://www.pocketsign.org/asl/goodbye"
+  },
+  {
+    "assetId": "cf92dbd2-d025-5297-b844-e9eee72d57d6",
+    "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+    "expiresAt": null,
+    "mimeType": "video/mp4",
+    "durationMs": 2280,
+    "sourcePage": "https://www.pocketsign.org/asl/hello"
+  },
+  {
+    "assetId": "2846abc0-ca4b-503a-9fbe-a416b9e0327b",
+    "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/goodbye.mp4",
+    "expiresAt": null,
+    "mimeType": "video/mp4",
+    "durationMs": 2360,
+    "sourcePage": "https://www.pocketsign.org/asl/goodbye"
+  }
+]
