@@ -58,6 +58,7 @@ asl:
       window: ${ASL_CATALOG_RATE_LIMIT_WINDOW:PT1M}
       max-clients: ${ASL_CATALOG_RATE_LIMIT_MAX_CLIENTS:10000}
   media:
+    development-fixtures: ${ASL_MEDIA_DEVELOPMENT_FIXTURES:false}
     public-base-url: ${MEDIA_PUBLIC_BASE_URL:}
     minimum-remaining-ttl: ${MEDIA_MIN_REMAINING_TTL:PT5S}
     rate-limit:

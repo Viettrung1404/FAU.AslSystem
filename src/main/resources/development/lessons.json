@@ -1,0 +1,872 @@
+[
+  {
+    "lessonId": "e5a6e571-c0f4-50c1-a18b-bee8c717bc1b",
+    "versionId": "ce7ce6d0-e0b5-56aa-ba21-78df0d0a5e71",
+    "title": "Greetings",
+    "type": "LESSON",
+    "signs": [
+      {
+        "id": "6c560c29-c637-54d6-a1d9-09625358b002",
+        "name": "Hello",
+        "video": {
+          "assetId": "3a0cd01b-5ff3-51af-b6fc-a2f7bcc11313",
+          "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+          "expiresAt": null,
+          "mimeType": "video/mp4",
+          "durationMs": 2280
+        }
+      },
+      {
+        "id": "21eeb1b4-49b4-5ef7-b78d-10448b606e41",
+        "name": "Goodbye",
+        "video": {
+          "assetId": "29db2af0-0fef-5308-914b-f7ef52cf6592",
+          "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/goodbye.mp4",
+          "expiresAt": null,
+          "mimeType": "video/mp4",
+          "durationMs": 2360
+        }
+      }
+    ],
+    "exercises": [
+      {
+        "exerciseId": "95ba3626-f6f9-599e-b2ec-eccbe9971aa7",
+        "position": 0,
+        "prompt": "Choose the correct translation",
+        "payload": {
+          "schemaVersion": 1,
+          "videoSlot": "prompt",
+          "options": [
+            {
+              "id": "opt_hello",
+              "label": "Hello"
+            },
+            {
+              "id": "opt_goodbye",
+              "label": "Goodbye"
+            }
+          ]
+        },
+        "media": {
+          "prompt": {
+            "assetId": "b1d1560a-526c-5f41-9918-97cc2b127ef6",
+            "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+            "expiresAt": null,
+            "mimeType": "video/mp4",
+            "durationMs": 2280
+          }
+        },
+        "type": "VIDEO_TO_WORD",
+        "answerKey": {
+          "correctOptionId": "opt_hello"
+        },
+        "pointsPerCorrect": 10,
+        "signIds": [
+          "6c560c29-c637-54d6-a1d9-09625358b002"
+        ]
+      },
+      {
+        "exerciseId": "8663aa0b-b755-564d-bd86-0ffffc6232ba",
+        "position": 1,
+        "prompt": "Video to meaning",
+        "payload": {
+          "schemaVersion": 1,
+          "videoSlot": "prompt",
+          "options": [
+            {
+              "id": "opt_hello",
+              "label": "Hello"
+            },
+            {
+              "id": "opt_goodbye",
+              "label": "Goodbye"
+            }
+          ]
+        },
+        "media": {
+          "prompt": {
+            "assetId": "b1d1560a-526c-5f41-9918-97cc2b127ef6",
+            "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+            "expiresAt": null,
+            "mimeType": "video/mp4",
+            "durationMs": 2280
+          }
+        },
+        "type": "VIDEO_TO_MEANING",
+        "answerKey": {
+          "correctOptionId": "opt_hello"
+        },
+        "pointsPerCorrect": 10,
+        "signIds": [
+          "6c560c29-c637-54d6-a1d9-09625358b002"
+        ]
+      },
+      {
+        "exerciseId": "209fa589-cf8a-5643-8e7b-cd0f0295f927",
+        "position": 2,
+        "prompt": "Word to video",
+        "payload": {
+          "schemaVersion": 1,
+          "word": "Hello",
+          "options": [
+            {
+              "id": "opt_hello",
+              "mediaSlot": "option_hello"
+            },
+            {
+              "id": "opt_goodbye",
+              "mediaSlot": "option_goodbye"
+            }
+          ]
+        },
+        "media": {
+          "option_hello": {
+            "assetId": "f4c0a7c5-6c03-5c47-90b4-186d902e1eac",
+            "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+            "expiresAt": null,
+            "mimeType": "video/mp4",
+            "durationMs": 2280
+          },
+          "option_goodbye": {
+            "assetId": "90c83b92-7567-5d6e-a1c8-ffec44c27b3f",
+            "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/goodbye.mp4",
+            "expiresAt": null,
+            "mimeType": "video/mp4",
+            "durationMs": 2360
+          }
+        },
+        "type": "WORD_TO_VIDEO",
+        "answerKey": {
+          "correctOptionId": "opt_hello"
+        },
+        "pointsPerCorrect": 10,
+        "signIds": [
+          "6c560c29-c637-54d6-a1d9-09625358b002"
+        ]
+      },
+      {
+        "exerciseId": "0773ae8f-4f5b-5d08-a8bf-38462512e7cb",
+        "position": 3,
+        "prompt": "Video to image",
+        "payload": {
+          "schemaVersion": 1,
+          "videoSlot": "prompt",
+          "options": [
+            {
+              "id": "opt_hello",
+              "imageSlot": "image_hello",
+              "label": "Hello"
+            },
+            {
+              "id": "opt_goodbye",
+              "imageSlot": "image_goodbye",
+              "label": "Goodbye"
+            }
+          ]
+        },
+        "media": {
+          "prompt": {
+            "assetId": "b1d1560a-526c-5f41-9918-97cc2b127ef6",
+            "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+            "expiresAt": null,
+            "mimeType": "video/mp4",
+            "durationMs": 2280
+          },
+          "image_hello": {
+            "assetId": "a7b274aa-f97e-534c-8dff-d7367c8c0506",
+            "url": "https://mobireactoraslresize.s3-us-west-2.amazonaws.com/thumbnails/hello.png",
+            "expiresAt": null,
+            "mimeType": "image/png",
+            "durationMs": null
+          },
+          "image_goodbye": {
+            "assetId": "24022045-c167-5b09-b222-4174db371dd6",
+            "url": "https://mobireactoraslresize.s3-us-west-2.amazonaws.com/thumbnails/goodbye.png",
+            "expiresAt": null,
+            "mimeType": "image/png",
+            "durationMs": null
+          }
+        },
+        "type": "VIDEO_TO_IMAGE",
+        "answerKey": {
+          "correctOptionId": "opt_hello"
+        },
+        "pointsPerCorrect": 10,
+        "signIds": [
+          "6c560c29-c637-54d6-a1d9-09625358b002"
+        ]
+      },
+      {
+        "exerciseId": "36c755ae-5a95-52d8-95be-da9964e411a7",
+        "position": 4,
+        "prompt": "Knowledge",
+        "payload": {
+          "schemaVersion": 1,
+          "question": "What is gloss?",
+          "options": [
+            {
+              "id": "opt_gloss",
+              "label": "A written representation of signs"
+            },
+            {
+              "id": "opt_sound",
+              "label": "A sound recording"
+            }
+          ]
+        },
+        "media": {},
+        "type": "KNOWLEDGE",
+        "answerKey": {
+          "correctOptionId": "opt_gloss"
+        },
+        "pointsPerCorrect": 10,
+        "signIds": [
+          "6c560c29-c637-54d6-a1d9-09625358b002"
+        ]
+      },
+      {
+        "exerciseId": "7dbd27ec-ce5c-54c8-8deb-c1b093758713",
+        "position": 5,
+        "prompt": "Match pairs",
+        "payload": {
+          "schemaVersion": 1,
+          "left": [
+            {
+              "id": "left_hello",
+              "mediaSlot": "hello"
+            },
+            {
+              "id": "left_goodbye",
+              "mediaSlot": "goodbye"
+            }
+          ],
+          "right": [
+            {
+              "id": "right_goodbye",
+              "label": "Goodbye"
+            },
+            {
+              "id": "right_hello",
+              "label": "Hello"
+            }
+          ]
+        },
+        "media": {
+          "hello": {
+            "assetId": "cf92dbd2-d025-5297-b844-e9eee72d57d6",
+            "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+            "expiresAt": null,
+            "mimeType": "video/mp4",
+            "durationMs": 2280
+          },
+          "goodbye": {
+            "assetId": "2846abc0-ca4b-503a-9fbe-a416b9e0327b",
+            "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/goodbye.mp4",
+            "expiresAt": null,
+            "mimeType": "video/mp4",
+            "durationMs": 2360
+          }
+        },
+        "type": "MATCH_PAIRS",
+        "answerKey": {
+          "pairs": {
+            "left_hello": "right_hello",
+            "left_goodbye": "right_goodbye"
+          }
+        },
+        "pointsPerCorrect": 10,
+        "signIds": [
+          "6c560c29-c637-54d6-a1d9-09625358b002"
+        ]
+      },
+      {
+        "exerciseId": "dbc44df5-097c-5ace-9a6c-f616d2df0a68",
+        "position": 6,
+        "prompt": "Fill gap",
+        "payload": {
+          "schemaVersion": 1,
+          "videoSlot": "prompt",
+          "glossTokens": [
+            ""
+          ],
+          "gapIndices": [
+            0
+          ],
+          "bank": [
+            {
+              "id": "token_hello",
+              "label": "HELLO"
+            },
+            {
+              "id": "token_goodbye",
+              "label": "GOODBYE"
+            }
+          ]
+        },
+        "media": {
+          "prompt": {
+            "assetId": "b1d1560a-526c-5f41-9918-97cc2b127ef6",
+            "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+            "expiresAt": null,
+            "mimeType": "video/mp4",
+            "durationMs": 2280
+          }
+        },
+        "type": "FILL_GAP",
+        "answerKey": {
+          "correctTokenIds": [
+            "token_hello"
+          ]
+        },
+        "pointsPerCorrect": 10,
+        "signIds": [
+          "6c560c29-c637-54d6-a1d9-09625358b002"
+        ]
+      },
+      {
+        "exerciseId": "bd925e60-ddc6-5b9f-9022-f4bf5eb0cdd6",
+        "position": 7,
+        "prompt": "Order signs",
+        "payload": {
+          "schemaVersion": 1,
+          "videoSlot": "prompt",
+          "slotCount": 1,
+          "bank": [
+            {
+              "id": "token_goodbye",
+              "label": "GOODBYE"
+            },
+            {
+              "id": "token_hello",
+              "label": "HELLO"
+            }
+          ]
+        },
+        "media": {
+          "prompt": {
+            "assetId": "b1d1560a-526c-5f41-9918-97cc2b127ef6",
+            "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+            "expiresAt": null,
+            "mimeType": "video/mp4",
+            "durationMs": 2280
+          }
+        },
+        "type": "ORDER_SIGNS",
+        "answerKey": {
+          "orderedTokenIds": [
+            "token_hello"
+          ]
+        },
+        "pointsPerCorrect": 10,
+        "signIds": [
+          "6c560c29-c637-54d6-a1d9-09625358b002"
+        ]
+      },
+      {
+        "exerciseId": "485e233a-31c1-5637-bb08-870f2b65f4a2",
+        "position": 8,
+        "prompt": "Spell",
+        "payload": {
+          "schemaVersion": 1,
+          "videoSlot": "prompt",
+          "slotCount": 5,
+          "bank": [
+            {
+              "id": "letter_l1",
+              "label": "L"
+            },
+            {
+              "id": "letter_e",
+              "label": "E"
+            },
+            {
+              "id": "letter_h",
+              "label": "H"
+            },
+            {
+              "id": "letter_o",
+              "label": "O"
+            },
+            {
+              "id": "letter_l2",
+              "label": "L"
+            },
+            {
+              "id": "letter_b",
+              "label": "B"
+            }
+          ]
+        },
+        "media": {
+          "prompt": {
+            "assetId": "b1d1560a-526c-5f41-9918-97cc2b127ef6",
+            "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+            "expiresAt": null,
+            "mimeType": "video/mp4",
+            "durationMs": 2280
+          }
+        },
+        "type": "SPELL",
+        "answerKey": {
+          "orderedTokenIds": [
+            "letter_h",
+            "letter_e",
+            "letter_l1",
+            "letter_l2",
+            "letter_o"
+          ]
+        },
+        "pointsPerCorrect": 10,
+        "signIds": [
+          "6c560c29-c637-54d6-a1d9-09625358b002"
+        ]
+      },
+      {
+        "exerciseId": "138ee427-3b48-5e97-b9da-abe28e3c82dc",
+        "position": 9,
+        "prompt": "Tip",
+        "payload": {
+          "schemaVersion": 1,
+          "title": "Keep practicing",
+          "rules": [
+            "Watch the whole sign before answering."
+          ],
+          "exampleVideoSlot": "prompt"
+        },
+        "media": {
+          "prompt": {
+            "assetId": "b1d1560a-526c-5f41-9918-97cc2b127ef6",
+            "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+            "expiresAt": null,
+            "mimeType": "video/mp4",
+            "durationMs": 2280
+          }
+        },
+        "type": "TIP",
+        "answerKey": null,
+        "pointsPerCorrect": 0,
+        "signIds": [
+          "6c560c29-c637-54d6-a1d9-09625358b002"
+        ]
+      },
+      {
+        "exerciseId": "a5e1e396-420d-564a-b2b6-19019fe99202",
+        "position": 10,
+        "prompt": "Encouragement",
+        "payload": {
+          "schemaVersion": 1,
+          "text": "You are doing well!"
+        },
+        "media": {},
+        "type": "ENCOURAGEMENT",
+        "answerKey": null,
+        "pointsPerCorrect": 0,
+        "signIds": [
+          "6c560c29-c637-54d6-a1d9-09625358b002"
+        ]
+      },
+      {
+        "exerciseId": "52960108-3e04-5ac1-9dae-ad2ae4583d02",
+        "position": 11,
+        "prompt": "Review intro",
+        "payload": {
+          "schemaVersion": 1,
+          "text": "You are doing well!"
+        },
+        "media": {},
+        "type": "REVIEW_INTRO",
+        "answerKey": null,
+        "pointsPerCorrect": 0,
+        "signIds": [
+          "6c560c29-c637-54d6-a1d9-09625358b002"
+        ]
+      },
+      {
+        "exerciseId": "2350e2b7-cd08-55a0-b196-fb66ae8b725f",
+        "position": 12,
+        "prompt": "Praise",
+        "payload": {
+          "schemaVersion": 1,
+          "text": "You are doing well!"
+        },
+        "media": {},
+        "type": "PRAISE",
+        "answerKey": null,
+        "pointsPerCorrect": 0,
+        "signIds": [
+          "6c560c29-c637-54d6-a1d9-09625358b002"
+        ]
+      }
+    ],
+    "conversationTurns": [],
+    "scoringPolicy": {
+      "version": 1,
+      "ordinaryQuestions": "FIRST_ATTEMPT_ONLY",
+      "matching": "EACH_CORRECT_PAIR_ONCE",
+      "reviewPoints": 0,
+      "commitOn": "LESSON_COMPLETED",
+      "replayEarnsPoints": true
+    }
+  },
+  {
+    "lessonId": "e338033b-4fab-5511-b463-d89e56b3831e",
+    "versionId": "f5c8067e-dca5-5c91-bcc0-92c6d5901c15",
+    "title": "Fingerspelling warm-up",
+    "type": "ALPHABET",
+    "signs": [
+      {
+        "id": "6c560c29-c637-54d6-a1d9-09625358b002",
+        "name": "Hello",
+        "video": {
+          "assetId": "3a0cd01b-5ff3-51af-b6fc-a2f7bcc11313",
+          "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+          "expiresAt": null,
+          "mimeType": "video/mp4",
+          "durationMs": 2280
+        }
+      },
+      {
+        "id": "21eeb1b4-49b4-5ef7-b78d-10448b606e41",
+        "name": "Goodbye",
+        "video": {
+          "assetId": "29db2af0-0fef-5308-914b-f7ef52cf6592",
+          "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/goodbye.mp4",
+          "expiresAt": null,
+          "mimeType": "video/mp4",
+          "durationMs": 2360
+        }
+      }
+    ],
+    "exercises": [
+      {
+        "exerciseId": "31b38775-effa-53c9-b283-04cdadf4edfc",
+        "position": 0,
+        "prompt": "Spell",
+        "payload": {
+          "schemaVersion": 1,
+          "videoSlot": "prompt",
+          "slotCount": 5,
+          "bank": [
+            {
+              "id": "letter_l1",
+              "label": "L"
+            },
+            {
+              "id": "letter_e",
+              "label": "E"
+            },
+            {
+              "id": "letter_h",
+              "label": "H"
+            },
+            {
+              "id": "letter_o",
+              "label": "O"
+            },
+            {
+              "id": "letter_l2",
+              "label": "L"
+            },
+            {
+              "id": "letter_b",
+              "label": "B"
+            }
+          ]
+        },
+        "media": {
+          "prompt": {
+            "assetId": "b1d1560a-526c-5f41-9918-97cc2b127ef6",
+            "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+            "expiresAt": null,
+            "mimeType": "video/mp4",
+            "durationMs": 2280
+          }
+        },
+        "type": "SPELL",
+        "answerKey": {
+          "orderedTokenIds": [
+            "letter_h",
+            "letter_e",
+            "letter_l1",
+            "letter_l2",
+            "letter_o"
+          ]
+        },
+        "pointsPerCorrect": 10,
+        "signIds": [
+          "6c560c29-c637-54d6-a1d9-09625358b002"
+        ]
+      },
+      {
+        "exerciseId": "6e057b31-99e0-5cb2-b175-18487c00312d",
+        "position": 1,
+        "prompt": "Tip",
+        "payload": {
+          "schemaVersion": 1,
+          "title": "Keep practicing",
+          "rules": [
+            "Watch the whole sign before answering."
+          ],
+          "exampleVideoSlot": "prompt"
+        },
+        "media": {
+          "prompt": {
+            "assetId": "b1d1560a-526c-5f41-9918-97cc2b127ef6",
+            "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+            "expiresAt": null,
+            "mimeType": "video/mp4",
+            "durationMs": 2280
+          }
+        },
+        "type": "TIP",
+        "answerKey": null,
+        "pointsPerCorrect": 0,
+        "signIds": [
+          "6c560c29-c637-54d6-a1d9-09625358b002"
+        ]
+      }
+    ],
+    "conversationTurns": [],
+    "scoringPolicy": {
+      "version": 1,
+      "ordinaryQuestions": "FIRST_ATTEMPT_ONLY",
+      "matching": "EACH_CORRECT_PAIR_ONCE",
+      "reviewPoints": 0,
+      "commitOn": "LESSON_COMPLETED",
+      "replayEarnsPoints": true
+    }
+  },
+  {
+    "lessonId": "d3605bda-6f5a-5bf7-8a88-5600ce649d12",
+    "versionId": "56ea5087-5cfb-5bd5-a097-548f07220d45",
+    "title": "Review greetings",
+    "type": "REVIEW",
+    "signs": [
+      {
+        "id": "6c560c29-c637-54d6-a1d9-09625358b002",
+        "name": "Hello",
+        "video": {
+          "assetId": "3a0cd01b-5ff3-51af-b6fc-a2f7bcc11313",
+          "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+          "expiresAt": null,
+          "mimeType": "video/mp4",
+          "durationMs": 2280
+        }
+      },
+      {
+        "id": "21eeb1b4-49b4-5ef7-b78d-10448b606e41",
+        "name": "Goodbye",
+        "video": {
+          "assetId": "29db2af0-0fef-5308-914b-f7ef52cf6592",
+          "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/goodbye.mp4",
+          "expiresAt": null,
+          "mimeType": "video/mp4",
+          "durationMs": 2360
+        }
+      }
+    ],
+    "exercises": [
+      {
+        "exerciseId": "4f2018f8-d704-5ad7-b7da-61caa390cecc",
+        "position": 0,
+        "prompt": "Choose the correct translation",
+        "payload": {
+          "schemaVersion": 1,
+          "videoSlot": "prompt",
+          "options": [
+            {
+              "id": "opt_hello",
+              "label": "Hello"
+            },
+            {
+              "id": "opt_goodbye",
+              "label": "Goodbye"
+            }
+          ]
+        },
+        "media": {
+          "prompt": {
+            "assetId": "b1d1560a-526c-5f41-9918-97cc2b127ef6",
+            "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+            "expiresAt": null,
+            "mimeType": "video/mp4",
+            "durationMs": 2280
+          }
+        },
+        "type": "VIDEO_TO_WORD",
+        "answerKey": {
+          "correctOptionId": "opt_hello"
+        },
+        "pointsPerCorrect": 10,
+        "signIds": [
+          "6c560c29-c637-54d6-a1d9-09625358b002"
+        ]
+      },
+      {
+        "exerciseId": "fb00ce7c-a7ec-5da9-a015-aa933d435b50",
+        "position": 1,
+        "prompt": "Match pairs",
+        "payload": {
+          "schemaVersion": 1,
+          "left": [
+            {
+              "id": "left_hello",
+              "mediaSlot": "hello"
+            },
+            {
+              "id": "left_goodbye",
+              "mediaSlot": "goodbye"
+            }
+          ],
+          "right": [
+            {
+              "id": "right_goodbye",
+              "label": "Goodbye"
+            },
+            {
+              "id": "right_hello",
+              "label": "Hello"
+            }
+          ]
+        },
+        "media": {
+          "hello": {
+            "assetId": "cf92dbd2-d025-5297-b844-e9eee72d57d6",
+            "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+            "expiresAt": null,
+            "mimeType": "video/mp4",
+            "durationMs": 2280
+          },
+          "goodbye": {
+            "assetId": "2846abc0-ca4b-503a-9fbe-a416b9e0327b",
+            "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/goodbye.mp4",
+            "expiresAt": null,
+            "mimeType": "video/mp4",
+            "durationMs": 2360
+          }
+        },
+        "type": "MATCH_PAIRS",
+        "answerKey": {
+          "pairs": {
+            "left_hello": "right_hello",
+            "left_goodbye": "right_goodbye"
+          }
+        },
+        "pointsPerCorrect": 10,
+        "signIds": [
+          "6c560c29-c637-54d6-a1d9-09625358b002"
+        ]
+      },
+      {
+        "exerciseId": "9faeffd3-6b2b-5df8-b338-b8d391f416e0",
+        "position": 2,
+        "prompt": "Review intro",
+        "payload": {
+          "schemaVersion": 1,
+          "text": "You are doing well!"
+        },
+        "media": {},
+        "type": "REVIEW_INTRO",
+        "answerKey": null,
+        "pointsPerCorrect": 0,
+        "signIds": [
+          "6c560c29-c637-54d6-a1d9-09625358b002"
+        ]
+      },
+      {
+        "exerciseId": "205647fd-f0d6-5354-88e4-7e5b6ba402f4",
+        "position": 3,
+        "prompt": "Praise",
+        "payload": {
+          "schemaVersion": 1,
+          "text": "You are doing well!"
+        },
+        "media": {},
+        "type": "PRAISE",
+        "answerKey": null,
+        "pointsPerCorrect": 0,
+        "signIds": [
+          "6c560c29-c637-54d6-a1d9-09625358b002"
+        ]
+      }
+    ],
+    "conversationTurns": [],
+    "scoringPolicy": {
+      "version": 1,
+      "ordinaryQuestions": "FIRST_ATTEMPT_ONLY",
+      "matching": "EACH_CORRECT_PAIR_ONCE",
+      "reviewPoints": 0,
+      "commitOn": "LESSON_COMPLETED",
+      "replayEarnsPoints": true
+    }
+  },
+  {
+    "lessonId": "f3ff62bd-a29b-52fe-beb1-6b9d4b074792",
+    "versionId": "274f2ac4-b374-5498-992e-982c1adac05b",
+    "title": "A friendly conversation",
+    "type": "CONVERSATION",
+    "signs": [
+      {
+        "id": "6c560c29-c637-54d6-a1d9-09625358b002",
+        "name": "Hello",
+        "video": {
+          "assetId": "3a0cd01b-5ff3-51af-b6fc-a2f7bcc11313",
+          "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+          "expiresAt": null,
+          "mimeType": "video/mp4",
+          "durationMs": 2280
+        }
+      },
+      {
+        "id": "21eeb1b4-49b4-5ef7-b78d-10448b606e41",
+        "name": "Goodbye",
+        "video": {
+          "assetId": "29db2af0-0fef-5308-914b-f7ef52cf6592",
+          "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/goodbye.mp4",
+          "expiresAt": null,
+          "mimeType": "video/mp4",
+          "durationMs": 2360
+        }
+      }
+    ],
+    "exercises": [],
+    "conversationTurns": [
+      {
+        "turnId": "4e29ef0b-7d9d-51e1-adb6-2b3b6d8418ee",
+        "position": 0,
+        "speakerSide": "PARTNER",
+        "glossCaption": "HELLO",
+        "englishTranslation": "Hello!",
+        "video": {
+          "assetId": "3a0cd01b-5ff3-51af-b6fc-a2f7bcc11313",
+          "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/hello.mp4",
+          "expiresAt": null,
+          "mimeType": "video/mp4",
+          "durationMs": 2280
+        }
+      },
+      {
+        "turnId": "d547b0db-abe4-5fcd-9fb0-6b7ac2e54719",
+        "position": 1,
+        "speakerSide": "LEARNER",
+        "glossCaption": "GOODBYE",
+        "englishTranslation": "Goodbye!",
+        "video": {
+          "assetId": "29db2af0-0fef-5308-914b-f7ef52cf6592",
+          "url": "https://mobireactorasl.s3-us-west-2.amazonaws.com/goodbye.mp4",
+          "expiresAt": null,
+          "mimeType": "video/mp4",
+          "durationMs": 2360
+        }
+      }
+    ],
+    "scoringPolicy": {
+      "version": 1,
+      "ordinaryQuestions": "FIRST_ATTEMPT_ONLY",
+      "matching": "EACH_CORRECT_PAIR_ONCE",
+      "reviewPoints": 0,
+      "commitOn": "LESSON_COMPLETED",
+      "replayEarnsPoints": true
+    }
+  }
+]

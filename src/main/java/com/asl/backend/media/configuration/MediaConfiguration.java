@@ -3,6 +3,7 @@ package com.asl.backend.media.configuration;
 import com.asl.backend.media.adapter.in.web.MediaHttpPolicy;
 import com.asl.backend.media.adapter.in.transaction.TransactionalMediaApi;
 import com.asl.backend.media.adapter.out.delivery.PublicCdnUrlProvider;
+import com.asl.backend.media.adapter.out.delivery.DevelopmentMediaUrlProvider;
 import com.asl.backend.media.adapter.out.observability.MediaTelemetry;
 import com.asl.backend.media.application.MediaService;
 import com.asl.backend.media.application.api.MediaApi;
@@ -18,8 +19,15 @@ import io.micrometer.core.instrument.MeterRegistry;
 public class MediaConfiguration {
     @Bean MediaTelemetry mediaTelemetry(MeterRegistry registry) { return new MediaTelemetry(registry); }
 
-    @Bean MediaUrlProvider mediaUrlProvider(@Value("${asl.media.public-base-url:}") String baseUrl, MediaTelemetry telemetry) {
-        return telemetry.observe(new PublicCdnUrlProvider(baseUrl));
+    @Bean MediaUrlProvider mediaUrlProvider(@Value("${asl.media.public-base-url:}") String baseUrl, MediaTelemetry telemetry,
+            org.springframework.core.env.Environment environment,
+            @Value("${asl.media.development-fixtures:false}") boolean development) {
+        MediaUrlProvider provider = new PublicCdnUrlProvider(baseUrl);
+        if (development) {
+            if (!environment.matchesProfiles("dev")) throw new IllegalStateException("Development media requires the dev profile");
+            provider = new DevelopmentMediaUrlProvider(provider);
+        }
+        return telemetry.observe(provider);
     }
     @Bean MediaApi mediaApi(AssetRepository repository, MediaUrlProvider provider, PlatformTransactionManager manager,
             MediaTelemetry telemetry, @Value("${asl.media.minimum-remaining-ttl:PT5S}") Duration minimumRemainingTtl) {
