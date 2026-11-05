@@ -42,7 +42,7 @@ def connect(env_file):
 
 def verify(conn, trial, pending_migrations=False):
     checks = []
-    contract = yaml.safe_load((ROOT / 'api-contract/openapi.mobile.yaml').read_text(encoding='utf-8'))
+    contract = yaml.safe_load((ROOT / '.api-contract/openapi.mobile.yaml').read_text(encoding='utf-8'))
     migration = (MIGRATIONS / 'V2__create_mobile_schema.sql').read_text(encoding='utf-8')
     with conn.cursor() as cur:
         def check(name, condition):

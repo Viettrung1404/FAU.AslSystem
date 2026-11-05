@@ -41,8 +41,8 @@ class FoundationIT {
         }
     }
 
-    @Test void businessEndpointsAreNotStubbed() throws Exception {
-        var response = get("/api/v1/signs");
+    @Test void unknownBusinessEndpointsUseTheErrorEnvelope() throws Exception {
+        var response = get("/api/v1/unknown-operation");
         assertThat(response.statusCode()).isEqualTo(404);
         assertThat(response.body()).contains("\"error\"", "\"requestId\"");
     }

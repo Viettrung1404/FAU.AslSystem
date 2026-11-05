@@ -15,7 +15,7 @@ EXPECTED = {'200', '400', '404', '410', '422', '429', '503'}
 
 
 def verify(directory):
-    raw = (ROOT / 'api-contract/openapi.mobile.yaml').read_bytes()
+    raw = (ROOT / '.api-contract/openapi.mobile.yaml').read_bytes()
     contract = yaml.safe_load(raw)
     responses = contract['paths']['/api/v1/media/urls']['post']['responses']
     files = sorted(directory.glob('*.json'))

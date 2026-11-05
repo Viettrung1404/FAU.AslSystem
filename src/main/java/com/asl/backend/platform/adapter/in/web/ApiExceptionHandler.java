@@ -23,6 +23,9 @@ public class ApiExceptionHandler {
         int status = switch (failure.kind()) {
             case BAD_REQUEST -> 400;
             case INVALID_INPUT -> 422;
+            case UNAUTHENTICATED -> 401;
+            case FORBIDDEN -> 403;
+            case CONFLICT -> 409;
             case NOT_FOUND -> 404;
             case REMOVED -> 410;
             case UNAVAILABLE -> 503;
