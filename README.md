@@ -220,3 +220,30 @@ python -X utf8 tools/verify_learning_responses.py --report ../plan/verification/
 
 The final backend verification passed 107 tests (81 unit/HTTP/architecture + 26
 integration). See [module verification](../plan/verification/03-learning-content.md).
+
+
+## Module 04-dictionary v? 05-practice
+
+Dictionary c? s?u GET public/catalog/search/membership. Search d?ng literal substring tr?n t?n NFC/trim/lower, kh?ng di?n gi?i `%`, `_` ho?c regex. Cursor c? HMAC, r?ng bu?c query/type/collection/sort; membership theo position, search theo normalized name/type/UUID. Limit m?c ??nh 20, t?i ?a 100. Membership lu?n `private, no-store`; c?c response c?n l?i `no-store`. Token ???c g?i l?n ph?i ???c x?c minh tr??c membership query, k? c? collection free.
+
+| C?u h?nh | M?c ??nh | Vai tr? |
+|---|---|---|
+| `ASL_SHARE_ORIGIN` | R?ng | HTTPS origin th?t c?a `/collections/{id}`; thi?u/sai tr? 503 khi render collection |
+| `ASL_DICTIONARY_CURSOR_SECRET` | R?ng | Secret ri?ng >=32 byte; ??ng nh?t gi?a c?c instance |
+| `ASL_DICTIONARY_RATE_LIMIT_REQUESTS` | 120 | Request/IP trong m?t c?a s?, t?ng instance |
+| `ASL_PRACTICE_RATE_LIMIT_REQUESTS` | 60 | Request/IP d?ng chung availability/generate |
+| `ASL_PRACTICE_SET_TTL` | PT1H | TTL b? luy?n t?p; r?t ng?n theo expiry media |
+
+Hai limiter c? th?m `_WINDOW` (PT1M) v? `_MAX_CLIENTS` (10000), kh?ng tin X-Forwarded-For. Kh?ng t? c?u h?nh domain gi? ho?c ghi secret th?t v?o source. HTML landing ch? hi?n th? gi?i thi?u catalog collection; kh?ng l? membership Premium. Khi deploy c?n domain HTTPS v? Android/iOS verified association t??ng ?ng. Flutter ?? c? route collection, copy/native share, ph?t video v? ph?n trang membership.
+
+`CollectionAccess` l? c?ng t?ch h?p identity/entitlement. Tr??c khi module 07/09 ???c tri?n khai, m?c ??nh t? ch?i m?i credential ch?a x?c minh v? guest Premium b?ng 401; guest v?n xem collection free. Provider th?t ph?i ki?m tra quy?n hi?n h?nh tr?n m?i trang v? tr? 403 PREMIUM_REQUIRED cho t?i kho?n h?p l? thi?u quy?n. C?c test doubles ch? ? test, kh?ng c?p Premium gi? trong production.
+
+Practice nh?n `completedLessons: [{lessonId, versionId}]`, ??m >=3 lessonId distinct v? ch? ??c snapshot ngu?n qua API learning. Draft/unknown/mismatch/duplicate tr? 422, withdrawn tr? 410. B?n mode tr? answer keys local; Quiz ?? ba d?ng v? matching 2?8 c?p/item. Kh?ng thay old version b?ng current, kh?ng padding sign ch?a h?c, kh?ng Premium gate. Default 10/max 30 items, c? th? ?t h?n. Flutter c? player/ch?m local v? gi? nguy?n snapshot cho reporting module 06; kh?ng c?ng ?i?m/streak ho?c t?o server history. Kh?ng c?n migration m?i.
+
+Sau `mvnw.cmd verify` tr?n TEST_DB ri?ng, t? workspace root:
+
+```powershell
+python -X utf8 backend/tools/verify_dictionary_practice_responses.py --report .plan/verification/dictionary-practice-contract-report.json
+```
+
+Xem [dictionary](../.plan/verification/04-dictionary.md), [practice](../.plan/verification/05-practice.md) v? [ADR-0014](../.plan/adr/0014.md). Fixtures ki?m th? l? n?i dung t?ng h?p, kh?ng ph?i production; kh?ng c? seed t? ??ng khi startup.

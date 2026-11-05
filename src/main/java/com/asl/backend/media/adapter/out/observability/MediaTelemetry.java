@@ -96,6 +96,8 @@ public final class MediaTelemetry {
                 case REMOVED -> "removed";
                 case UNAVAILABLE -> "unavailable";
                 case RATE_LIMITED -> "rate_limited";
+                case UNAUTHENTICATED, FORBIDDEN -> "access_denied";
+                case CONFLICT -> "conflict";
             };
         }
         return "unexpected";

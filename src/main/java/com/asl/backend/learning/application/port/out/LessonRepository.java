@@ -12,7 +12,9 @@ public interface LessonRepository {
     record Version(UUID lessonId, UUID versionId, String title, String type,
                    Instant publishedAt, Instant revokedAt, List<Sign> signs,
                    List<Exercise> exercises, List<Turn> turns) { }
-    record Sign(UUID id, String name, UUID assetId) { }
+    record Sign(UUID id, String name, UUID assetId, String kind) {
+        public Sign(UUID id, String name, UUID assetId) { this(id, name, assetId, "WORD"); }
+    }
     record Exercise(UUID id, int position, String type, String prompt,
                     Map<String, Object> payload, Map<String, Object> answerKey,
                     int points, List<UUID> signIds, Map<String, UUID> media) { }

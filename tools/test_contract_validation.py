@@ -7,7 +7,7 @@ from jsonschema import Draft202012Validator
 from contract_semantics import validate_fixture_semantics
 
 ROOT = Path(__file__).resolve().parents[2]
-CONTRACT = yaml.safe_load((ROOT / 'api-contract/openapi.mobile.yaml').read_text(encoding='utf-8'))
+CONTRACT = yaml.safe_load((ROOT / '.api-contract/openapi.mobile.yaml').read_text(encoding='utf-8'))
 
 
 class ContractReviewTests(unittest.TestCase):

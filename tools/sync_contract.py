@@ -8,7 +8,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--write', action='store_true', help='Copy api-contract/openapi.mobile.yaml into backend')
     args = parser.parse_args()
-    source = ROOT / 'api-contract/openapi.mobile.yaml'
+    source = ROOT / '.api-contract/openapi.mobile.yaml'
     target = ROOT / 'backend/openapi.mobile.yaml'
     if args.write:
         target.write_bytes(source.read_bytes())

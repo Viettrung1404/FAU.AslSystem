@@ -79,7 +79,7 @@ if __name__ == '__main__':
     parser.add_argument('--decode', action='store_true', help='Also decode every frame/image; requires opencv-python and Pillow')
     parser.add_argument('--report', type=Path)
     args = parser.parse_args()
-    manifest = json.loads((ROOT / 'api-contract/examples/mock-media.json').read_text(encoding='utf-8'))
+    manifest = json.loads((ROOT / '.api-contract/examples/mock-media.json').read_text(encoding='utf-8'))
     unique = {asset['url']: asset for asset in manifest['assets']}
     with ThreadPoolExecutor(max_workers=6) as pool:
         results = list(pool.map(lambda asset: inspect(asset, args.decode), unique.values()))
