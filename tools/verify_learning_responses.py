@@ -12,7 +12,7 @@ REQUIRED = {'lesson_content': {'200', '400', '404', '410', '429', '503'}}
 
 
 def verify(directory):
-    raw = (ROOT / 'api-contract/openapi.mobile.yaml').read_bytes()
+    raw = (ROOT / '.api-contract/openapi.mobile.yaml').read_bytes()
     contract = yaml.safe_load(raw)
     operations = {path['get']['operationId']: path['get'] for path in contract['paths'].values()
                   if 'get' in path and path['get']['operationId'] in REQUIRED}

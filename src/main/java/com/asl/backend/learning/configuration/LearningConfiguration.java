@@ -14,6 +14,9 @@ import org.springframework.web.servlet.config.annotation.*;
 
 @Configuration
 public class LearningConfiguration {
+    @Bean com.asl.backend.learning.application.api.PracticeContentReader practiceContentReader(LessonRepository repository) {
+        return new com.asl.backend.learning.application.LearningPracticeReader(repository, Clock.systemUTC());
+    }
     @Bean LearningApi learningApi(LessonRepository repository, MediaApi media, PlatformTransactionManager manager) {
         return new TransactionalLearningApi(new LearningService(repository, media, Clock.systemUTC()), manager);
     }
