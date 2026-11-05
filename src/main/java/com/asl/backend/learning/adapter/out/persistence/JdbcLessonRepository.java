@@ -29,7 +29,7 @@ public class JdbcLessonRepository implements LessonRepository {
         if (versions.isEmpty()) return Optional.empty();
         var v = versions.getFirst(); var id = v.versionId();
         var signs = jdbc.query("select * from asl.lesson_version_signs where lesson_version_id=? order by position", (r, n) ->
-                new Sign(r.getObject("sign_id", UUID.class), r.getString("name_snapshot"), r.getObject("video_asset_id", UUID.class)), id);
+                new Sign(r.getObject("sign_id", UUID.class), r.getString("name_snapshot"), r.getObject("video_asset_id", UUID.class), r.getString("kind_snapshot")), id);
         // Bulk load associations; no query per exercise or media slot.
         Map<UUID, List<UUID>> signIds = new HashMap<>();
         jdbc.query("select exercise_id,sign_id from asl.exercise_signs where lesson_version_id=? order by exercise_id,sign_id", r -> {

@@ -81,14 +81,14 @@ def validate(contract_path, operations_path):
     if len(actual) != len(owners) or len({op['operationId'] for op in operations}) != len(operations):
         errors.append("Duplicate operations")
     for op in owners:
-        if not (ROOT / "plan" / "modules" / (op["module"] + ".md")).is_file():
+        if not (ROOT / ".plan" / "modules" / (op["module"] + ".md")).is_file():
             errors.append(f"Missing module plan: {op['module']}")
     semantic_checks, semantic_errors = validate_fixture_semantics(contract)
     errors.extend(semantic_errors)
     mirror = ROOT / 'backend/openapi.mobile.yaml'
     if not mirror.exists() or mirror.read_bytes() != raw:
         errors.append('backend/openapi.mobile.yaml differs from canonical contract; run backend/tools/sync_contract.py --write')
-    manifest = json.loads((ROOT / 'api-contract/examples/mock-media.json').read_text(encoding='utf-8'))
+    manifest = json.loads((ROOT / '.api-contract/examples/mock-media.json').read_text(encoding='utf-8'))
     assets = {asset['assetId']: asset for asset in manifest['assets']}
     media_examples = 0
 
@@ -122,7 +122,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--report", type=Path)
     args = parser.parse_args()
-    result = validate(ROOT / "api-contract" / "openapi.mobile.yaml", ROOT / "plan" / "operations.json")
+    result = validate(ROOT / ".api-contract" / "openapi.mobile.yaml", ROOT / ".plan" / "operations.json")
     output = json.dumps(result, ensure_ascii=False, indent=2)
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
