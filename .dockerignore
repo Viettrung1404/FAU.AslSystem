@@ -1,0 +1,18 @@
+# Allow only the Maven descriptor and runtime sources into the build context.
+# This excludes .env, .git, target, tests, tools, logs and database exports.
+**
+!pom.xml
+!src/
+!src/main/
+!src/main/**
+
+# Also exclude credentials accidentally placed under src/main.
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*service-account*.json
+**/*serviceAccount*.json
+**/*firebase-adminsdk*.json

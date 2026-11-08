@@ -1,5 +1,7 @@
 # Nền móng backend ASL
 
+Đóng gói Docker và cấu hình Render: [RENDER_DEPLOY.md](RENDER_DEPLOY.md).
+
 Cập nhật 07/11/2026: module 06–08 đã triển khai; tổng 23 operations trong scope, tám billing operations bàn giao leader. Full backend verify đạt 150 unit/HTTP/architecture + 46 integration tests trên DB tạm riêng. Cấu hình mới ở [ACCOUNT_SYNC_SETUP.md](ACCOUNT_SYNC_SETUP.md); Firebase Google/Apple thật chờ project config từ leader. Flyway V4–V6 bổ sung UID mapping, checkpoint invariants và contractVersion 0.4.0. Phần mô tả baseline phía dưới giữ lịch sử.
 
 Java 21, Spring Boot 4.1.1, PostgreSQL trên Neon; chạy bằng Maven Wrapper, không cần Docker. Đã triển khai media, catalog và learning-content (6 operations); 29 operations còn lại theo [kế hoạch](../plan/README.md). Xem [ADR-0008](../plan/adr/0008.md).
