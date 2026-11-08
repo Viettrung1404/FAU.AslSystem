@@ -30,7 +30,7 @@ public final class CatalogService implements CatalogApi {
                     || host.endsWith(".invalid") || support.getUserInfo() != null) throw new IllegalArgumentException();
         } catch (IllegalArgumentException invalid) { throw unavailable(); }
         var p = repository.policy();
-        if (p == null || !"v1".equals(p.apiVersion()) || !"0.3.0".equals(p.contractVersion())
+        if (p == null || !"v1".equals(p.apiVersion()) || !"0.4.0".equals(p.contractVersion())
                 || p.dailyLessonLimit() != null || !Integer.valueOf(3).equals(p.practiceMinimumDistinctLessons())
                 || !Boolean.FALSE.equals(p.offlineLearningSupported()) || p.practiceModes() == null
                 || p.practiceModes().size() != 4 || !new HashSet<>(p.practiceModes()).equals(

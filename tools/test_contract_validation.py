@@ -11,6 +11,29 @@ CONTRACT = yaml.safe_load((ROOT / '.api-contract/openapi.mobile.yaml').read_text
 
 
 class ContractReviewTests(unittest.TestCase):
+    def test_firebase_bootstrap_rejects_client_selected_identity(self):
+        schema = {'$ref': '#/components/schemas/AccountBootstrap', 'components': CONTRACT['components']}
+        validator = Draft202012Validator(schema)
+        request = {'timeZone': 'Asia/Ho_Chi_Minh', 'acceptedDocumentIds': []}
+        self.assertTrue(validator.is_valid(request))
+        for field in ('userId', 'firebaseUid', 'email', 'idToken', 'refreshToken', 'provider'):
+            self.assertFalse(validator.is_valid(dict(request, **{field: 'client-selected'})))
+        self.assertFalse(validator.is_valid({'acceptedDocumentIds': []}))
+        self.assertFalse(validator.is_valid({'timeZone': 'UTC'}))
+        request['acceptedDocumentIds'] = ['f6ac9880-6b8f-5a7a-acdc-ca099da6a8ff'] * 2
+        self.assertFalse(validator.is_valid(request))
+
+    def test_profile_allows_missing_or_relay_email_but_requires_internal_uuid(self):
+        from jsonschema import FormatChecker
+        schema = {'$ref': '#/components/schemas/Profile', 'components': CONTRACT['components']}
+        validator = Draft202012Validator(schema, format_checker=FormatChecker())
+        profile = {'id': '49f7c811-47aa-5de8-9e57-b82e348edf7a', 'email': None, 'name': None}
+        self.assertTrue(validator.is_valid(profile))
+        profile['email'] = 'example@privaterelay.appleid.com'
+        self.assertTrue(validator.is_valid(profile))
+        profile['id'] = 'firebase-uid-is-not-the-internal-account-id'
+        self.assertFalse(validator.is_valid(profile))
+
     def setUp(self):
         self.contract = deepcopy(CONTRACT)
 

@@ -49,6 +49,13 @@ logging:
   pattern:
     level: '%5p [requestId=%X{requestId:-}]'
 asl:
+  identity:
+    firebase-project-id: ${FIREBASE_PROJECT_ID:}
+    firebase-credentials-file: ${GOOGLE_APPLICATION_CREDENTIALS:}
+    rate-limit:
+      requests: ${ASL_IDENTITY_RATE_LIMIT_REQUESTS:60}
+      window: ${ASL_IDENTITY_RATE_LIMIT_WINDOW:PT1M}
+      max-clients: ${ASL_IDENTITY_RATE_LIMIT_MAX_CLIENTS:10000}
   dictionary:
     share-origin: ${ASL_SHARE_ORIGIN:}
     cursor-secret: ${ASL_DICTIONARY_CURSOR_SECRET:}

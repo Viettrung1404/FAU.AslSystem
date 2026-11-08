@@ -40,7 +40,7 @@ class CatalogHttpTest {
     }
     @Test void configHasAllContractFieldsAndUnlimitedLearning() throws Exception {
         var result = mvc.perform(get("/api/v1/config")).andExpect(status().isOk())
-                .andExpect(jsonPath("$.contractVersion").value("0.3.0"))
+                .andExpect(jsonPath("$.contractVersion").value("0.4.0"))
                 .andExpect(jsonPath("$.dailyLessonLimit").value(org.hamcrest.Matchers.nullValue()))
                 .andExpect(jsonPath("$.practiceModes.length()").value(4))
                 .andExpect(jsonPath("$.practiceMinimumDistinctLessons").value(3))
