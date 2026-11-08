@@ -85,7 +85,7 @@ class CatalogServiceTest {
     @Test void configReturnsStoredVersionedPolicyAndRealConfiguredSupportUrl() {
         var config = service(true).config();
         assertThat(config).isNotNull();
-        assertThat(config.contractVersion()).isEqualTo("0.3.0");
+        assertThat(config.contractVersion()).isEqualTo("0.4.0");
         assertThat(config.dailyLessonLimit()).isNull();
         assertThat(config.practiceMinimumDistinctLessons()).isEqualTo(3);
         assertThat(config.practiceModes()).containsExactly("QUIZ", "FLASHCARDS", "SIGN_MATCHING", "ALPHABET_MATCHING");
@@ -129,7 +129,7 @@ class CatalogServiceTest {
         return ref;
     }
     static CatalogPolicy policy() {
-        return new CatalogPolicy("v1", "0.3.0", null, 3, List.of("QUIZ", "FLASHCARDS", "SIGN_MATCHING", "ALPHABET_MATCHING"), false,
+        return new CatalogPolicy("v1", "0.4.0", null, 3, List.of("QUIZ", "FLASHCARDS", "SIGN_MATCHING", "ALPHABET_MATCHING"), false,
                 new CatalogPolicy.Scoring(1, "FIRST_ATTEMPT_ONLY", "EACH_CORRECT_PAIR_ONCE", 0, "LESSON_COMPLETED", true));
     }
     static void assertCode(String code, org.assertj.core.api.ThrowableAssert.ThrowingCallable action) {

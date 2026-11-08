@@ -36,7 +36,7 @@ class CatalogIT {
     @Test void configReadsMigratedVersionAndScoringFromDatabase() throws Exception {
         var response = get("/api/v1/config");
         assertThat(response.statusCode()).isEqualTo(200);
-        assertThat(response.body()).contains("\"contractVersion\":\"0.3.0\"", "\"dailyLessonLimit\":null", "\"practiceMinimumDistinctLessons\":3");
+        assertThat(response.body()).contains("\"contractVersion\":\"0.4.0\"", "\"dailyLessonLimit\":null", "\"practiceMinimumDistinctLessons\":3");
         capture("catalog_config-200-integration", response);
         new TransactionTemplate(manager).executeWithoutResult(status -> {
             jdbc.update("update asl.app_settings set setting_value=jsonb_set(setting_value,'{contractVersion}','\"0.2.0\"') where setting_key='mobile_policy'");

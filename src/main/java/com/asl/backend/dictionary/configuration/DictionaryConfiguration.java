@@ -7,6 +7,7 @@ import com.asl.backend.dictionary.adapter.in.transaction.*;
 import com.asl.backend.dictionary.adapter.in.web.*;
 import com.asl.backend.media.application.api.MediaApi;
 import com.asl.backend.platform.application.api.ApplicationFailure;
+import com.asl.backend.identity.application.api.IdentityApi;
 import java.time.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -15,10 +16,14 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.web.servlet.config.annotation.*;
 @Configuration
 public class DictionaryConfiguration {
-    @Bean @ConditionalOnMissingBean(CollectionAccess.class) CollectionAccess collectionAccess() {
-        // No identity/billing module yet. Never accept an unverified bearer or fabricate entitlement.
+    @Bean @ConditionalOnMissingBean(CollectionAccess.class) CollectionAccess collectionAccess(IdentityApi identity) {
+        // Billing belongs to the leader. Validate accounts now, never infer paid rights from a local flag.
         return (authorization,premium) -> {
-            if (authorization!=null || premium) throw new ApplicationFailure(ApplicationFailure.Kind.UNAUTHENTICATED,"UNAUTHORIZED","A verified account is required");
+            if (premium) {
+                identity.requireAccount(authorization);
+                throw new ApplicationFailure(ApplicationFailure.Kind.FORBIDDEN,"PREMIUM_REQUIRED","Premium access requires verified billing integration");
+            }
+            identity.optionalAccount(authorization);
         };
     }
     @Bean DictionaryApi dictionaryApi(DictionaryRepository repository,CollectionAccess access,MediaApi media,PlatformTransactionManager manager,

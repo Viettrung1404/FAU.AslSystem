@@ -1,10 +1,10 @@
 # Đối chiếu màn hình ASL Bloom với API mobile
 
-Ngày đối chiếu: **21/10/2026**. Phiên bản contract: **0.3.0**.
+Ngày đối chiếu PDF ban đầu: **21/10/2026**. Identity cập nhật **07/11/2026** theo contract **0.4.0**.
 
 ## 1. Nguồn và cách đọc
 
-- Contract được đối chiếu: [openapi.mobile.yaml](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>), trường `info.version = 0.3.0`, 35 operations / 34 paths.
+- Contract được đối chiếu: [openapi.mobile.yaml](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>), trường `info.version = 0.4.0`, 31 operations / 30 paths.
 - Thiết kế tham chiếu: [ASL_Bloom_reference_analysis.pdf](<C:/Users/ACER/Downloads/ASL App/ASL_Bloom_reference_analysis.pdf>), 42 trang. Số trang trong tài liệu này là số trang PDF, bắt đầu từ 1.
 - PDF trang 8–11: navigation và screen inventory; trang 13–17: hành vi màn hình; trang 32–35: ABC, Review, Conversation và Practice; trang 36–42: thư viện ảnh.
 - Các mã `Sxx` là mã bằng chứng trong PDF, không phải tên route hoặc API.
@@ -41,13 +41,11 @@ Tham chiếu PDF: trang 8, 10–11, 15, 25; ảnh trang 36 và 42.
 | Splash — S00 | Bootstrap ứng dụng, theo chính sách cache của app | `GET /api/v1/config` — Public; lấy cấu hình học, Practice, scoring và `supportUrl` | Animation, đọc local store và phiên đăng nhập, chọn màn tiếp theo. Không có API splash riêng. |
 | Welcome — S01 | Khi cần hiển thị Terms/Privacy và lấy ID tài liệu | `GET /api/v1/legal-documents` — Public; `LegalDocuments.items` chứa type, version, URL, documentId | Hiển thị checkbox và lưu những tài liệu người dùng thực sự đồng ý. |
 | Bấm Terms / Privacy — S02/S03 | Khi bấm liên kết; dùng URL đã tải | Không cần API mới; mở `LegalDocument.url` | Mở trình duyệt/webview. Không tái hiện lỗi reference dẫn vào Home. |
-| Get started / onboarding sau Welcome | Khi đi tiếp | Chưa có API questionnaire/onboarding riêng. Luồng email dùng các API dưới đây nếu thiết kế chuyển sang đăng nhập/tạo tài khoản | PDF chưa khảo sát đầy đủ onboarding; không tự coi các câu hỏi onboarding là đã được thiết kế. |
-| Email login / register — S41/S71 | Bấm Continue sau khi nhập email hợp lệ | `POST /api/v1/auth/otp/request`; body `email`, `clientRequestId`; nhận `OtpChallenge` | Giữ `challengeId`, `expiresAt`, `resendAfterSeconds`, chuyển sang nhập mã. |
-| Access Code — S42 | Bấm xác nhận mã | `POST /api/v1/auth/otp/verify`; body gồm `challengeId`, `code`, `clientRequestId`, `timeZone`, `acceptedDocumentIds`; `deviceLabel` tùy chọn | Lưu phiên từ `TokenPair`, chuyển sang luồng đồng bộ. Mã hiện tại 4 số. |
-| Resend code | Người dùng bấm gửi lại sau thời gian chờ | `POST /api/v1/auth/otp/challenges/{challengeId}/resend` | Cập nhật challenge/timer theo response; mã cũ bị vô hiệu theo mô tả contract. |
-| Token hết hạn | Lớp quản lý phiên cần gia hạn | `POST /api/v1/auth/refresh`; body `refreshToken`, `clientRequestId` | Lưu token mới. Đây là tác vụ dùng chung, không phải màn hình riêng. |
+| Get started / onboarding | Continue | Firebase Google/Apple sign-in, then auth/bootstrap if an account is requested | No questionnaire API is defined. |
+| Google/Apple login | Choose provider | Firebase SDK sign-in, then POST auth/bootstrap with timeZone and acceptedDocumentIds | Returns Profile UUID; no TokenPair. |
+| ID token expired | SDK session management | Firebase SDK refresh; no backend refresh endpoint | At most one safe retry with stable write IDs. |
 
-Đăng nhập email hợp lệ lần đầu có thể tạo account theo mô tả OpenAPI; không có endpoint register riêng. Không tự động đánh dấu đã đồng ý tài liệu chỉ vì gọi verify.
+Bootstrap resolves a verified Firebase UID to an internal UUID. Require explicit legal consent; email is never the identity or an account merge key.
 
 ## 4. Home, lộ trình và lesson
 
@@ -198,15 +196,15 @@ Tham chiếu PDF: trang 9, 11, 15, 17, 34; ảnh trang 42.
 
 | Màn hình / thao tác | API | Dữ liệu và lưu ý |
 |---|---|---|
-| Profile khách — S70 | Không gọi `/me`; legal/config nếu chưa có | Log in/Register tới luồng OTP. Thống kê khách nếu app hiển thị thì lấy local. |
-| Profile đăng nhập — S72/S136 | `GET /api/v1/me` — Bearer | Hiển thị tên/email từ Profile; TokenPair.user có thể cung cấp dữ liệu ban đầu. |
+| Guest profile (S70) | No GET /me | Firebase Google/Apple sign-in; guest statistics remain local. |
+| Profile đăng nhập — S72/S136 | `GET /api/v1/me` — Bearer | Hiển thị tên/email từ Profile; Bootstrap Profile có thể cung cấp dữ liệu ban đầu. |
 | Your progress | Local trước, `GET /api/v1/me/stats` để đối chiếu khi phù hợp | totalPoints, currentStreak, recordStreak, learnedSignIds, completedLessonIds, activityDates. Stats phản ánh attempts đã được nhận, không nhất thiết bao gồm outbox local chưa sync. |
 | Sửa tên | `PATCH /api/v1/me` — Bearer; body `{ "name": "..." }` | Không dùng endpoint này để sửa email/preferences. |
 | Daily reminders / Haptics | Local rồi mutation `PREFERENCES` | Nhắc giờ và rung do thiết bị thực hiện. Sync preferences không tự cấp quyền notification của OS. |
 | Đổi mục tiêu hoặc giờ nhắc | Mutation `PREFERENCES` khi đăng nhập | Gửi đủ schema preferences; `dailyReminderLocalTime` dạng HH:mm hoặc null; timezone IANA. |
 | Help Center — S74 | Mở `Config.supportUrl` | Không có API ticket/FAQ riêng trong contract. |
 | Terms / Privacy | `GET /api/v1/legal-documents` nếu chưa có, mở URL | Dùng chung với Welcome. |
-| Logout | `POST /api/v1/auth/logout` với refreshToken | Hủy phiên local và chuyển về dữ liệu guest. Không hiển thị dữ liệu account A cho account B. Tách namespace local là gợi ý triển khai cần giữ nhất quán với sync. |
+| Logout | Firebase SDK signOut; no backend auth/logout endpoint | Stop sync, switch local UUID namespace. Local logout does not revoke issued tokens. |
 | Delete account | **Không có operation tương ứng trong file** | Thiết kế hiện có nút trong PDF; cần bổ sung flow/API hoặc chưa hiển thị chức năng hoạt động. |
 | Discount code — S73 | **Không có operation tương ứng trong file** | Không ánh xạ sang purchase verify/restore. |
 
@@ -272,7 +270,7 @@ Request refresh thất bại toàn bộ nếu có asset không khả dụng theo
 | Collection riêng | PERSONAL_COLLECTION | My collections và editor |
 | Mục tiêu, reminder, haptics, timezone | PREFERENCES | Goal picker, Profile/settings |
 
-**Trình tự tích hợp đề xuất:** sau OTP verify, đọc hết snapshot → gộp với dữ liệu local và giữ hàng đợi chưa gửi → push mutations → pull changes từ cursor đã lưu → lấy stats để đối chiếu. Đây là trình tự orchestration; YAML không chứa đầy đủ mọi thuật toán merge xung đột của từng entity và có dẫn sang SYNC_PROTOCOL.md. Nhóm cần thống nhất tài liệu sync cùng phiên bản khi triển khai.
+**Trình tự tích hợp đề xuất:** after Firebase sign-in and bootstrap, đọc hết snapshot → gộp với dữ liệu local và giữ hàng đợi chưa gửi → push mutations → pull changes từ cursor đã lưu → lấy stats để đối chiếu. Đây là trình tự orchestration; YAML không chứa đầy đủ mọi thuật toán merge xung đột của từng entity và có dẫn sang SYNC_PROTOCOL.md. Nhóm cần thống nhất tài liệu sync cùng phiên bản khi triển khai.
 
 Những điều đã nêu trực tiếp trong YAML:
 
@@ -341,41 +339,37 @@ Phụ lục dưới đây liệt kê toàn bộ operations của đúng file YAM
 
 | # | API / vị trí trong YAML | Màn hình hoặc tác vụ | Auth | Phase trong contract |
 |---|---|---|---|---|
-| 1 | [GET /api/v1/config](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:17>) | Splash/bootstrap; Help Center | Public | CORE |
-| 2 | [GET /api/v1/home](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:108>) | Home và phân trang lộ trình | Public | CORE |
-| 3 | [GET /api/v1/units](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:225>) | Repository catalog; thay thế danh sách unit trong Home | Public | CORE |
-| 4 | [GET /api/v1/units/{unitId}](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:318>) | Tải riêng unit khi cần | Public | CORE |
-| 5 | [GET /api/v1/lessons/{lessonId}](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:411>) | Lesson/ABC/Review/Conversation; resume | Public | CORE |
-| 6 | [GET /api/v1/signs](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:1002>) | Bộ chọn sign; danh sách dictionary | Public | CORE |
-| 7 | [GET /api/v1/signs/{signId}](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:1096>) | Sign detail; bổ sung dữ liệu favorites/collection riêng | Public | CORE |
-| 8 | [GET /api/v1/collections](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:1202>) | Signs → Public | Public | CORE |
-| 9 | [GET /api/v1/collections/{collectionId}](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:1307>) | Collection detail; mở shared link | Public | CORE |
-| 10 | [GET /api/v1/collections/{collectionId}/signs](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:1400>) | Danh sách sign của catalog collection | Conditional / token tùy chọn | CORE |
-| 11 | [GET /api/v1/search](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:1544>) | Search; bộ chọn sign | Public | CORE |
-| 12 | [POST /api/v1/practice/availability](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:1667>) | Tab Practice, trạng thái bốn mode | Public | CORE |
-| 13 | [POST /api/v1/practice/sets](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:1884>) | Bắt đầu Quiz/Flashcards/Sign Matching/Alphabet Matching | Public | CORE |
-| 14 | [POST /api/v1/media/urls](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:2304>) | Player lesson/sign/Practice khi media URL hết hạn | Public | CORE |
-| 15 | [POST /api/v1/reports](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:2422>) | Report lesson/sign/collection/Quiz | Conditional / token tùy chọn | CORE |
-| 16 | [GET /api/v1/legal-documents](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:2581>) | Welcome; legal links trên Profile | Public | LATER_AUTH |
-| 17 | [POST /api/v1/auth/otp/request](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:2658>) | Email login/register | Public | LATER_AUTH |
-| 18 | [POST /api/v1/auth/otp/challenges/{challengeId}/resend](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:2748>) | Access Code → Resend | Public | LATER_AUTH |
-| 19 | [POST /api/v1/auth/otp/verify](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:2847>) | Access Code → xác nhận đăng nhập | Public | LATER_AUTH |
-| 20 | [POST /api/v1/auth/refresh](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:2957>) | Quản lý phiên dùng chung | Public | LATER_AUTH |
-| 21 | [POST /api/v1/auth/logout](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:3064>) | Profile → Logout | Public | LATER_AUTH |
-| 22 | [GET /api/v1/me](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:3142>) | Profile tài khoản | Bearer | LATER_AUTH |
-| 23 | [PATCH /api/v1/me](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:3231>) | Profile → sửa tên | Bearer | LATER_AUTH |
-| 24 | [GET /api/v1/me/stats](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:3331>) | Đối chiếu số liệu Home/Profile sau sync | Bearer | LATER_SYNC |
-| 25 | [GET /api/v1/sync/snapshot](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:3424>) | Sau đăng nhập; khôi phục sync khi cursor hết hạn | Bearer | LATER_SYNC |
-| 26 | [GET /api/v1/sync/changes](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:3593>) | Đồng bộ thay đổi tài khoản | Bearer | LATER_SYNC |
-| 27 | [POST /api/v1/sync/mutations](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:3726>) | Attempt, favorites, collection riêng, preferences | Bearer | LATER_SYNC |
-| 28 | [GET /api/v1/subscription/products](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:3991>) | Paywall → Plans | Public | LATER_PREMIUM |
-| 29 | [GET /api/v1/me/billing-context](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:4082>) | Chuẩn bị mua qua native Store | Bearer | LATER_PREMIUM |
-| 30 | [GET /api/v1/me/entitlements](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:4171>) | Quyền Premium tại Profile/Signs/paywall | Bearer | LATER_PREMIUM |
-| 31 | [GET /api/v1/me/subscriptions](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:4261>) | Profile → Subscription | Bearer | LATER_PREMIUM |
-| 32 | [POST /api/v1/purchases/verify](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:4367>) | Sau Store purchase | Bearer | LATER_PREMIUM |
-| 33 | [GET /api/v1/purchases/{purchaseId}](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:4528>) | Theo dõi giao dịch verify/restore pending | Bearer | LATER_PREMIUM |
-| 34 | [POST /api/v1/purchases/restore](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:4646>) | Profile → Restore purchase | Bearer | LATER_PREMIUM |
-| 35 | [GET /api/v1/subscriptions/{subscriptionId}/management-link](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml:4787>) | Profile → Manage/Cancel subscription | Bearer | LATER_PREMIUM |
+| 1 | [GET /api/v1/config](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Splash/bootstrap; Help Center | Public | CORE |
+| 2 | [GET /api/v1/home](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Home và phân trang lộ trình | Public | CORE |
+| 3 | [GET /api/v1/units](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Repository catalog; thay thế danh sách unit trong Home | Public | CORE |
+| 4 | [GET /api/v1/units/{unitId}](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Tải riêng unit khi cần | Public | CORE |
+| 5 | [GET /api/v1/lessons/{lessonId}](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Lesson/ABC/Review/Conversation; resume | Public | CORE |
+| 6 | [GET /api/v1/signs](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Bộ chọn sign; danh sách dictionary | Public | CORE |
+| 7 | [GET /api/v1/signs/{signId}](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Sign detail; bổ sung dữ liệu favorites/collection riêng | Public | CORE |
+| 8 | [GET /api/v1/collections](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Signs → Public | Public | CORE |
+| 9 | [GET /api/v1/collections/{collectionId}](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Collection detail; mở shared link | Public | CORE |
+| 10 | [GET /api/v1/collections/{collectionId}/signs](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Danh sách sign của catalog collection | Conditional / token tùy chọn | CORE |
+| 11 | [GET /api/v1/search](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Search; bộ chọn sign | Public | CORE |
+| 12 | [POST /api/v1/practice/availability](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Tab Practice, trạng thái bốn mode | Public | CORE |
+| 13 | [POST /api/v1/practice/sets](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Bắt đầu Quiz/Flashcards/Sign Matching/Alphabet Matching | Public | CORE |
+| 14 | [POST /api/v1/media/urls](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Player lesson/sign/Practice khi media URL hết hạn | Public | CORE |
+| 15 | [POST /api/v1/reports](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Report lesson/sign/collection/Quiz | Conditional / token tùy chọn | CORE |
+| 16 | [GET /api/v1/legal-documents](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Welcome; legal links trên Profile | Public | LATER_AUTH |
+| 17 | `POST /api/v1/auth/bootstrap` | Sau Firebase Google/Apple sign-in | Firebase Bearer | LATER_AUTH |
+| 18 | [GET /api/v1/me](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Profile tài khoản | Bearer | LATER_AUTH |
+| 19 | [PATCH /api/v1/me](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Profile → sửa tên | Bearer | LATER_AUTH |
+| 20 | [GET /api/v1/me/stats](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Đối chiếu số liệu Home/Profile sau sync | Bearer | LATER_SYNC |
+| 21 | [GET /api/v1/sync/snapshot](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Sau đăng nhập; khôi phục sync khi cursor hết hạn | Bearer | LATER_SYNC |
+| 22 | [GET /api/v1/sync/changes](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Đồng bộ thay đổi tài khoản | Bearer | LATER_SYNC |
+| 23 | [POST /api/v1/sync/mutations](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Attempt, favorites, collection riêng, preferences | Bearer | LATER_SYNC |
+| 24 | [GET /api/v1/subscription/products](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Paywall → Plans | Public | LATER_PREMIUM |
+| 25 | [GET /api/v1/me/billing-context](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Chuẩn bị mua qua native Store | Bearer | LATER_PREMIUM |
+| 26 | [GET /api/v1/me/entitlements](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Quyền Premium tại Profile/Signs/paywall | Bearer | LATER_PREMIUM |
+| 27 | [GET /api/v1/me/subscriptions](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Profile → Subscription | Bearer | LATER_PREMIUM |
+| 28 | [POST /api/v1/purchases/verify](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Sau Store purchase | Bearer | LATER_PREMIUM |
+| 29 | [GET /api/v1/purchases/{purchaseId}](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Theo dõi giao dịch verify/restore pending | Bearer | LATER_PREMIUM |
+| 30 | [POST /api/v1/purchases/restore](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Profile → Restore purchase | Bearer | LATER_PREMIUM |
+| 31 | [GET /api/v1/subscriptions/{subscriptionId}/management-link](<D:/VS_Code/problems.Java/ASL App/backend/openapi.mobile.yaml>) | Profile → Manage/Cancel subscription | Bearer | LATER_PREMIUM |
 
 ## 13. Dấu vết phiên bản nguồn
 
@@ -385,3 +379,6 @@ SHA-256 tại thời điểm đối chiếu:
 - PDF: `df89c17247693a0d089697c53f4b708b858d855f4871608617f3fe2749331744`.
 
 Tài liệu chỉ đối chiếu nội dung tĩnh, không chạy giao dịch mua, gửi report, thay đổi account hoặc kiểm thử backend thật. Endpoint appendix và request Practice mẫu được kiểm tra lại với file YAML khi tạo tài liệu.
+
+
+Identity update 2026-11-07: Firebase Google/Apple replaces reference email/Access Code screens. Runtime identity remains PLANNED. Source SHA entries above describe the historical baseline, not contract 0.4; see ADR-0015.

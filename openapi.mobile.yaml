@@ -1,8 +1,9 @@
 openapi: 3.1.0
 info:
   title: ASL Mobile API
-  version: 0.3.0
-  description: Mobile only, updated 2026-10-18. Local learning, public signs, Premium collections.
+  version: 0.4.0
+  description: Mobile only, updated 2026-11-07. Firebase Authentication for Google/Apple; backend verifies Firebase ID tokens.
+    Local learning, public signs, Premium collections. Config contractVersion is 0.4.0.
     Development catalog examples unlock all lessons with empty prerequisiteLessonIds.
     Supersedes mobile v0.1; see MOBILE_CONTRACT.md and SYNC_PROTOCOL.md. Mock media placeholders,
     no deployment.
@@ -32,7 +33,7 @@ paths:
                 default:
                   value:
                     apiVersion: v1
-                    contractVersion: 0.3.0
+                    contractVersion: 0.4.0
                     dailyLessonLimit: null
                     practiceMinimumDistinctLessons: 3
                     practiceModes: &id021
@@ -2521,6 +2522,32 @@ paths:
                       code: REPORT_ID_REUSED
                       message: Report id reused
                       requestId: 736a7efc-077f-5683-801a-4051821de245
+        '403':
+          description: Account suspended or sign-in provider not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                forbidden:
+                  value:
+                    error:
+                      code: FORBIDDEN
+                      message: Account suspended or sign-in provider not allowed
+                      requestId: 736a7efc-077f-5683-801a-4051821de245
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                not_found:
+                  value:
+                    error:
+                      code: NOT_FOUND
+                      message: Report target not found
+                      requestId: 736a7efc-077f-5683-801a-4051821de245
       x-phase: CORE
       x-idempotent-replay: false
       requestBody:
@@ -2580,9 +2607,7 @@ paths:
     get:
       operationId: auth_legal
       summary: Legal documents
-      description: Legal documents. Rate-limit OTP attempts and resend; resend invalidates
-        old code. First valid email login creates account. Atomic refresh rotation;
-        logout idempotent, does not erase local data.
+      description: Published legal document versions for explicit consent at account bootstrap.
       tags:
       - auth
       security: []
@@ -2653,205 +2678,22 @@ paths:
                       requestId: 736a7efc-077f-5683-801a-4051821de245
       x-phase: LATER_AUTH
       x-idempotent-replay: false
-  /api/v1/auth/otp/request:
+  /api/v1/auth/bootstrap:
     post:
-      operationId: auth_requestOtp
-      summary: Request email login code
-      description: Request email login code. Rate-limit OTP attempts and resend; resend
-        invalidates old code. First valid email login creates account. Atomic refresh
-        rotation; logout idempotent, does not erase local data.
+      operationId: auth_bootstrap
+      summary: Create or restore account after Firebase sign-in
+      description: Verify Firebase ID token from Authorization Bearer with the configured project and revocation
+        check. Accept Google or Apple identities only. Atomically upsert account by verified Firebase UID
+        and record explicitly accepted legal document versions. Validate IANA timeZone. Require current
+        TERMS and PRIVACY consent on first registration; already stored current consent counts as accepted. Analytics consent is optional. Unknown, unpublished
+        or missing required documents return 422 without creating an account. Retry and concurrent requests
+        resolve to the same internal UUID and do not duplicate consent or sync initialization. Existing
+        profile and timezone are preserved on retry. No email-based account merge. Returns Profile only;
+        Firebase SDK manages tokens. Other account APIs require a bootstrapped, non-suspended account.
       tags:
       - auth
-      security: []
-      parameters: []
-      responses:
-        '202':
-          description: Success
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OtpChallenge'
-              examples:
-                default:
-                  value:
-                    challengeId: 8270abf6-d417-590e-a690-61794aeaaaba
-                    expiresAt: '2026-10-16T09:00:00Z'
-                    resendAfterSeconds: 60
-                    codeLength: 4
-        '400':
-          description: BAD_REQUEST
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                bad_request:
-                  value:
-                    error:
-                      code: BAD_REQUEST
-                      message: Bad request
-                      requestId: 736a7efc-077f-5683-801a-4051821de245
-        '422':
-          description: VALIDATION_FAILED
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                validation_failed:
-                  value:
-                    error:
-                      code: VALIDATION_FAILED
-                      message: Validation failed
-                      requestId: 736a7efc-077f-5683-801a-4051821de245
-        '429':
-          description: RATE_LIMITED
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                rate_limited:
-                  value:
-                    error:
-                      code: RATE_LIMITED
-                      message: Rate limited
-                      requestId: 736a7efc-077f-5683-801a-4051821de245
-        '503':
-          description: SERVICE_UNAVAILABLE
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                service_unavailable:
-                  value:
-                    error:
-                      code: SERVICE_UNAVAILABLE
-                      message: Service unavailable
-                      requestId: 736a7efc-077f-5683-801a-4051821de245
-      x-phase: LATER_AUTH
-      x-idempotent-replay: false
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/OtpRequest'
-            examples:
-              default:
-                value:
-                  email: learner@example.invalid
-                  clientRequestId: 522387b9-6de6-5c72-ad86-ea84f358abce
-  /api/v1/auth/otp/challenges/{challengeId}/resend:
-    post:
-      operationId: auth_resendOtp
-      summary: Resend code
-      description: Resend code. Rate-limit OTP attempts and resend; resend invalidates
-        old code. First valid email login creates account. Atomic refresh rotation;
-        logout idempotent, does not erase local data.
-      tags:
-      - auth
-      security: []
-      parameters:
-      - name: challengeId
-        in: path
-        required: true
-        schema:
-          type: string
-          example: 088e271c-865e-58ae-b1c5-ef044b8bdad3
-          format: uuid
-      responses:
-        '202':
-          description: Success
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OtpChallenge'
-              examples:
-                default:
-                  value:
-                    challengeId: 8270abf6-d417-590e-a690-61794aeaaaba
-                    expiresAt: '2026-10-16T09:00:00Z'
-                    resendAfterSeconds: 60
-                    codeLength: 4
-        '400':
-          description: BAD_REQUEST
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                bad_request:
-                  value:
-                    error:
-                      code: BAD_REQUEST
-                      message: Bad request
-                      requestId: 736a7efc-077f-5683-801a-4051821de245
-        '422':
-          description: VALIDATION_FAILED
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                validation_failed:
-                  value:
-                    error:
-                      code: VALIDATION_FAILED
-                      message: Validation failed
-                      requestId: 736a7efc-077f-5683-801a-4051821de245
-        '429':
-          description: RATE_LIMITED
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                rate_limited:
-                  value:
-                    error:
-                      code: RATE_LIMITED
-                      message: Rate limited
-                      requestId: 736a7efc-077f-5683-801a-4051821de245
-        '503':
-          description: SERVICE_UNAVAILABLE
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                service_unavailable:
-                  value:
-                    error:
-                      code: SERVICE_UNAVAILABLE
-                      message: Service unavailable
-                      requestId: 736a7efc-077f-5683-801a-4051821de245
-        '404':
-          description: NOT_FOUND
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                not_found:
-                  value:
-                    error:
-                      code: NOT_FOUND
-                      message: Not found
-                      requestId: 736a7efc-077f-5683-801a-4051821de245
-      x-phase: LATER_AUTH
-      x-idempotent-replay: false
-  /api/v1/auth/otp/verify:
-    post:
-      operationId: auth_verifyOtp
-      summary: Verify code and sign in
-      description: Verify code and sign in. Rate-limit OTP attempts and resend; resend
-        invalidates old code. First valid email login creates account. Atomic refresh
-        rotation; logout idempotent, does not erase local data.
-      tags:
-      - auth
-      security: []
+      security:
+      - bearerAuth: []
       parameters: []
       responses:
         '200':
@@ -2859,18 +2701,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenPair'
+                $ref: '#/components/schemas/Profile'
               examples:
                 default:
                   value:
-                    accessToken: mock-access-token
-                    refreshToken: mock-refresh-token
-                    tokenType: Bearer
-                    expiresIn: 900
-                    user:
-                      id: 49f7c811-47aa-5de8-9e57-b82e348edf7a
-                      email: learner@example.invalid
-                      name: null
+                    id: 49f7c811-47aa-5de8-9e57-b82e348edf7a
+                    email: learner@example.invalid
+                    name: null
         '400':
           description: BAD_REQUEST
           content:
@@ -2924,17 +2761,30 @@ paths:
                       message: Service unavailable
                       requestId: 736a7efc-077f-5683-801a-4051821de245
         '401':
-          description: INVALID_OR_EXPIRED_CREDENTIAL
+          description: UNAUTHORIZED
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
               examples:
-                invalid_or_expired_credential:
+                unauthorized:
                   value:
                     error:
-                      code: INVALID_OR_EXPIRED_CREDENTIAL
-                      message: Invalid or expired credential
+                      code: UNAUTHORIZED
+                      message: Unauthorized
+                      requestId: 736a7efc-077f-5683-801a-4051821de245
+        '403':
+          description: Account suspended or sign-in provider not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                forbidden:
+                  value:
+                    error:
+                      code: FORBIDDEN
+                      message: Account suspended or sign-in provider not allowed
                       requestId: 736a7efc-077f-5683-801a-4051821de245
       x-phase: LATER_AUTH
       x-idempotent-replay: false
@@ -2943,200 +2793,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/OtpVerify'
+              $ref: '#/components/schemas/AccountBootstrap'
             examples:
               default:
                 value:
-                  challengeId: 8270abf6-d417-590e-a690-61794aeaaaba
-                  code: '1234'
-                  clientRequestId: 7aa98bf1-955f-5ed2-a2bc-14c0d57b5a4c
                   timeZone: Asia/Ho_Chi_Minh
-                  acceptedDocumentIds: []
-  /api/v1/auth/refresh:
-    post:
-      operationId: auth_refresh
-      summary: Rotate refresh token
-      description: Rotate refresh token. Rate-limit OTP attempts and resend; resend
-        invalidates old code. First valid email login creates account. Atomic refresh
-        rotation; logout idempotent, does not erase local data.
-      tags:
-      - auth
-      security: []
-      parameters: []
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TokenPair'
-              examples:
-                default:
-                  value:
-                    accessToken: mock-access-token
-                    refreshToken: mock-refresh-token
-                    tokenType: Bearer
-                    expiresIn: 900
-                    user:
-                      id: 49f7c811-47aa-5de8-9e57-b82e348edf7a
-                      email: learner@example.invalid
-                      name: null
-        '400':
-          description: BAD_REQUEST
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                bad_request:
-                  value:
-                    error:
-                      code: BAD_REQUEST
-                      message: Bad request
-                      requestId: 736a7efc-077f-5683-801a-4051821de245
-        '422':
-          description: VALIDATION_FAILED
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                validation_failed:
-                  value:
-                    error:
-                      code: VALIDATION_FAILED
-                      message: Validation failed
-                      requestId: 736a7efc-077f-5683-801a-4051821de245
-        '429':
-          description: RATE_LIMITED
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                rate_limited:
-                  value:
-                    error:
-                      code: RATE_LIMITED
-                      message: Rate limited
-                      requestId: 736a7efc-077f-5683-801a-4051821de245
-        '503':
-          description: SERVICE_UNAVAILABLE
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                service_unavailable:
-                  value:
-                    error:
-                      code: SERVICE_UNAVAILABLE
-                      message: Service unavailable
-                      requestId: 736a7efc-077f-5683-801a-4051821de245
-        '401':
-          description: INVALID_OR_EXPIRED_CREDENTIAL
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                invalid_or_expired_credential:
-                  value:
-                    error:
-                      code: INVALID_OR_EXPIRED_CREDENTIAL
-                      message: Invalid or expired credential
-                      requestId: 736a7efc-077f-5683-801a-4051821de245
-      x-phase: LATER_AUTH
-      x-idempotent-replay: false
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RefreshRequest'
-            examples:
-              default:
-                value:
-                  refreshToken: mock-refresh-token
-                  clientRequestId: f6b4ce5e-2b7c-5215-8693-d8dc39673ccc
-  /api/v1/auth/logout:
-    post:
-      operationId: auth_logout
-      summary: Revoke refresh token
-      description: Revoke refresh token. Rate-limit OTP attempts and resend; resend
-        invalidates old code. First valid email login creates account. Atomic refresh
-        rotation; logout idempotent, does not erase local data.
-      tags:
-      - auth
-      security: []
-      parameters: []
-      responses:
-        '204':
-          description: Success
-        '400':
-          description: BAD_REQUEST
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                bad_request:
-                  value:
-                    error:
-                      code: BAD_REQUEST
-                      message: Bad request
-                      requestId: 736a7efc-077f-5683-801a-4051821de245
-        '422':
-          description: VALIDATION_FAILED
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                validation_failed:
-                  value:
-                    error:
-                      code: VALIDATION_FAILED
-                      message: Validation failed
-                      requestId: 736a7efc-077f-5683-801a-4051821de245
-        '429':
-          description: RATE_LIMITED
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                rate_limited:
-                  value:
-                    error:
-                      code: RATE_LIMITED
-                      message: Rate limited
-                      requestId: 736a7efc-077f-5683-801a-4051821de245
-        '503':
-          description: SERVICE_UNAVAILABLE
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                service_unavailable:
-                  value:
-                    error:
-                      code: SERVICE_UNAVAILABLE
-                      message: Service unavailable
-                      requestId: 736a7efc-077f-5683-801a-4051821de245
-      x-phase: LATER_AUTH
-      x-idempotent-replay: false
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LogoutRequest'
-            examples:
-              default:
-                value:
-                  refreshToken: mock-refresh-token
+                  acceptedDocumentIds:
+                  - f6ac9880-6b8f-5a7a-acdc-ca099da6a8ff
+                  - 9ef3f670-38cd-423a-a196-1dad84778018
   /api/v1/me:
     get:
       operationId: account_profile
@@ -3224,6 +2888,19 @@ paths:
                     error:
                       code: UNAUTHORIZED
                       message: Unauthorized
+                      requestId: 736a7efc-077f-5683-801a-4051821de245
+        '403':
+          description: Account suspended or sign-in provider not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                forbidden:
+                  value:
+                    error:
+                      code: FORBIDDEN
+                      message: Account suspended or sign-in provider not allowed
                       requestId: 736a7efc-077f-5683-801a-4051821de245
       x-phase: LATER_AUTH
       x-idempotent-replay: false
@@ -3313,6 +2990,19 @@ paths:
                     error:
                       code: UNAUTHORIZED
                       message: Unauthorized
+                      requestId: 736a7efc-077f-5683-801a-4051821de245
+        '403':
+          description: Account suspended or sign-in provider not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                forbidden:
+                  value:
+                    error:
+                      code: FORBIDDEN
+                      message: Account suspended or sign-in provider not allowed
                       requestId: 736a7efc-077f-5683-801a-4051821de245
       x-phase: LATER_AUTH
       x-idempotent-replay: false
@@ -3416,6 +3106,19 @@ paths:
                     error:
                       code: UNAUTHORIZED
                       message: Unauthorized
+                      requestId: 736a7efc-077f-5683-801a-4051821de245
+        '403':
+          description: Account suspended or sign-in provider not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                forbidden:
+                  value:
+                    error:
+                      code: FORBIDDEN
+                      message: Account suspended or sign-in provider not allowed
                       requestId: 736a7efc-077f-5683-801a-4051821de245
       x-phase: LATER_SYNC
       x-idempotent-replay: false
@@ -3586,6 +3289,32 @@ paths:
                       code: SYNC_CURSOR_EXPIRED
                       message: Sync cursor expired
                       requestId: 736a7efc-077f-5683-801a-4051821de245
+        '403':
+          description: Account suspended or sign-in provider not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                forbidden:
+                  value:
+                    error:
+                      code: FORBIDDEN
+                      message: Account suspended or sign-in provider not allowed
+                      requestId: 736a7efc-077f-5683-801a-4051821de245
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                not_found:
+                  value:
+                    error:
+                      code: NOT_FOUND
+                      message: Sync cursor not found
+                      requestId: 736a7efc-077f-5683-801a-4051821de245
       x-phase: LATER_SYNC
       x-idempotent-replay: false
   /api/v1/sync/changes:
@@ -3718,6 +3447,32 @@ paths:
                     error:
                       code: SYNC_CURSOR_EXPIRED
                       message: Sync cursor expired
+                      requestId: 736a7efc-077f-5683-801a-4051821de245
+        '403':
+          description: Account suspended or sign-in provider not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                forbidden:
+                  value:
+                    error:
+                      code: FORBIDDEN
+                      message: Account suspended or sign-in provider not allowed
+                      requestId: 736a7efc-077f-5683-801a-4051821de245
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                not_found:
+                  value:
+                    error:
+                      code: NOT_FOUND
+                      message: Sync cursor not found
                       requestId: 736a7efc-077f-5683-801a-4051821de245
       x-phase: LATER_SYNC
       x-idempotent-replay: false
@@ -3869,6 +3624,19 @@ paths:
                     error:
                       code: CONTENT_VERSION_RETIRED
                       message: Content version retired
+                      requestId: 736a7efc-077f-5683-801a-4051821de245
+        '403':
+          description: Account suspended or sign-in provider not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                forbidden:
+                  value:
+                    error:
+                      code: FORBIDDEN
+                      message: Account suspended or sign-in provider not allowed
                       requestId: 736a7efc-077f-5683-801a-4051821de245
       x-phase: LATER_SYNC
       x-idempotent-replay: false
@@ -4164,6 +3932,19 @@ paths:
                       code: UNAUTHORIZED
                       message: Unauthorized
                       requestId: 736a7efc-077f-5683-801a-4051821de245
+        '403':
+          description: Account suspended or sign-in provider not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                forbidden:
+                  value:
+                    error:
+                      code: FORBIDDEN
+                      message: Account suspended or sign-in provider not allowed
+                      requestId: 736a7efc-077f-5683-801a-4051821de245
       x-phase: LATER_PREMIUM
       x-idempotent-replay: false
   /api/v1/me/entitlements:
@@ -4253,6 +4034,19 @@ paths:
                     error:
                       code: UNAUTHORIZED
                       message: Unauthorized
+                      requestId: 736a7efc-077f-5683-801a-4051821de245
+        '403':
+          description: Account suspended or sign-in provider not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                forbidden:
+                  value:
+                    error:
+                      code: FORBIDDEN
+                      message: Account suspended or sign-in provider not allowed
                       requestId: 736a7efc-077f-5683-801a-4051821de245
       x-phase: LATER_PREMIUM
       x-idempotent-replay: false
@@ -4359,6 +4153,19 @@ paths:
                     error:
                       code: UNAUTHORIZED
                       message: Unauthorized
+                      requestId: 736a7efc-077f-5683-801a-4051821de245
+        '403':
+          description: Account suspended or sign-in provider not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                forbidden:
+                  value:
+                    error:
+                      code: FORBIDDEN
+                      message: Account suspended or sign-in provider not allowed
                       requestId: 736a7efc-077f-5683-801a-4051821de245
       x-phase: LATER_PREMIUM
       x-idempotent-replay: false
@@ -4509,6 +4316,19 @@ paths:
                       code: PURCHASE_OWNED_BY_ANOTHER_ACCOUNT
                       message: Purchase owned by another account
                       requestId: 736a7efc-077f-5683-801a-4051821de245
+        '403':
+          description: Account suspended or sign-in provider not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                forbidden:
+                  value:
+                    error:
+                      code: FORBIDDEN
+                      message: Account suspended or sign-in provider not allowed
+                      requestId: 736a7efc-077f-5683-801a-4051821de245
       x-phase: LATER_PREMIUM
       x-idempotent-replay: true
       requestBody:
@@ -4639,6 +4459,19 @@ paths:
                       code: NOT_FOUND
                       message: Not found
                       requestId: 736a7efc-077f-5683-801a-4051821de245
+        '403':
+          description: Account suspended or sign-in provider not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                forbidden:
+                  value:
+                    error:
+                      code: FORBIDDEN
+                      message: Account suspended or sign-in provider not allowed
+                      requestId: 736a7efc-077f-5683-801a-4051821de245
       x-phase: LATER_PREMIUM
       x-idempotent-replay: false
   /api/v1/purchases/restore:
@@ -4767,6 +4600,19 @@ paths:
                       code: PURCHASE_OWNED_BY_ANOTHER_ACCOUNT
                       message: Purchase owned by another account
                       requestId: 736a7efc-077f-5683-801a-4051821de245
+        '403':
+          description: Account suspended or sign-in provider not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                forbidden:
+                  value:
+                    error:
+                      code: FORBIDDEN
+                      message: Account suspended or sign-in provider not allowed
+                      requestId: 736a7efc-077f-5683-801a-4051821de245
       x-phase: LATER_PREMIUM
       x-idempotent-replay: true
       requestBody:
@@ -4888,6 +4734,19 @@ paths:
                       code: NOT_FOUND
                       message: Not found
                       requestId: 736a7efc-077f-5683-801a-4051821de245
+        '403':
+          description: Account suspended or sign-in provider not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                forbidden:
+                  value:
+                    error:
+                      code: FORBIDDEN
+                      message: Account suspended or sign-in provider not allowed
+                      requestId: 736a7efc-077f-5683-801a-4051821de245
       x-phase: LATER_PREMIUM
       x-idempotent-replay: false
 components:
@@ -4895,7 +4754,8 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: JWT
+      bearerFormat: Firebase ID token (JWT)
+      description: Firebase client ID token for the configured project, verified by Admin SDK including revocation and disabled-user checks. Never a Google/Apple provider token or Firebase custom token. Account APIs require successful bootstrap; suspended accounts return 403.
   schemas:
     FieldIssue:
       type: object
@@ -6472,9 +6332,9 @@ components:
           type: string
           example: v1
         contractVersion:
-          const: 0.3.0
+          const: 0.4.0
           type: string
-          example: 0.3.0
+          example: 0.4.0
         dailyLessonLimit:
           type: 'null'
         practiceMinimumDistinctLessons:
@@ -7666,6 +7526,7 @@ components:
         stored completion timezone. Current streak counts back from today or yesterday
         in account timezone.
     Profile:
+      description: Internal account UUID; email may be null or an Apple private relay address. Never use email as account identity.
       type: object
       properties:
         id:
@@ -7673,7 +7534,9 @@ components:
           example: 49f7c811-47aa-5de8-9e57-b82e348edf7a
           format: uuid
         email:
-          type: string
+          type:
+          - string
+          - 'null'
           example: learner@example.invalid
           format: email
         name:
@@ -7699,68 +7562,13 @@ components:
       required:
       - name
       additionalProperties: false
-    OtpRequest:
+    AccountBootstrap:
       type: object
       properties:
-        email:
-          type: string
-          example: learner@example.invalid
-          format: email
-        clientRequestId:
-          type: string
-          example: 522387b9-6de6-5c72-ad86-ea84f358abce
-          format: uuid
-      required:
-      - email
-      - clientRequestId
-      additionalProperties: false
-    OtpChallenge:
-      type: object
-      properties:
-        challengeId:
-          type: string
-          example: 8270abf6-d417-590e-a690-61794aeaaaba
-          format: uuid
-        expiresAt:
-          type: string
-          example: '2026-10-16T09:00:00Z'
-          format: date-time
-        resendAfterSeconds:
-          type: integer
-          minimum: 0
-          example: 60
-        codeLength:
-          type: integer
-          const: 4
-          example: 4
-      required:
-      - challengeId
-      - expiresAt
-      - resendAfterSeconds
-      - codeLength
-      additionalProperties: false
-    OtpVerify:
-      type: object
-      properties:
-        challengeId:
-          type: string
-          example: 8270abf6-d417-590e-a690-61794aeaaaba
-          format: uuid
-        code:
-          type: string
-          example: '1234'
-          pattern: ^[0-9]{4}$
-        clientRequestId:
-          type: string
-          example: 7aa98bf1-955f-5ed2-a2bc-14c0d57b5a4c
-          format: uuid
-        deviceLabel:
-          type: string
-          example: Android test device
-          maxLength: 120
         timeZone:
           type: string
           example: Asia/Ho_Chi_Minh
+          description: Valid IANA timezone; used only when creating an account.
         acceptedDocumentIds:
           type: array
           items:
@@ -7769,62 +7577,10 @@ components:
             format: uuid
           minItems: 0
           maxItems: 10
+          uniqueItems: true
       required:
-      - challengeId
-      - code
-      - clientRequestId
       - timeZone
       - acceptedDocumentIds
-      additionalProperties: false
-    TokenPair:
-      type: object
-      properties:
-        accessToken:
-          type: string
-          example: mock-access-token
-        refreshToken:
-          type: string
-          example: mock-refresh-token
-        tokenType:
-          type: string
-          enum:
-          - Bearer
-          example: Bearer
-        expiresIn:
-          type: integer
-          minimum: 1
-          example: 900
-        user:
-          $ref: '#/components/schemas/Profile'
-      required:
-      - accessToken
-      - refreshToken
-      - tokenType
-      - expiresIn
-      - user
-      additionalProperties: false
-    RefreshRequest:
-      type: object
-      properties:
-        refreshToken:
-          type: string
-          example: mock-refresh-token
-        clientRequestId:
-          type: string
-          example: f6b4ce5e-2b7c-5215-8693-d8dc39673ccc
-          format: uuid
-      required:
-      - refreshToken
-      - clientRequestId
-      additionalProperties: false
-    LogoutRequest:
-      type: object
-      properties:
-        refreshToken:
-          type: string
-          example: mock-refresh-token
-      required:
-      - refreshToken
       additionalProperties: false
     BillingContext:
       type: object
