@@ -44,8 +44,12 @@ public final class DictionaryService implements DictionaryApi {
         var rows = repository.page(scope, collectionId, q, type, after, limit + 1, clock.instant());
         var visible = rows.subList(0, Math.min(rows.size(), limit));
         var mediaMap = batchMedia(visible);
-        var items = visible.stream().map(row -> scope.equals("search")
-                ? Map.<String,Object>of("type", row.type(), row.type().equals("SIGN") ? "sign" : "collection", render(row, mediaMap.get(row.assetId()))) : render(row, mediaMap.get(row.assetId()))).toList();
+        var items = visible.stream().map(row -> {
+            Object asset = row.assetId() == null ? null : mediaMap.get(row.assetId());
+            return scope.equals("search")
+                ? Map.<String,Object>of("type", row.type(), row.type().equals("SIGN") ? "sign" : "collection", render(row, asset))
+                : render(row, asset);
+        }).toList();
         Map<String,Object> result = new LinkedHashMap<>(); result.put("items", items);
         result.put("nextCursor", rows.size() > limit ? cursors.encode(binding, visible.getLast().position()) : null);
         return result;
