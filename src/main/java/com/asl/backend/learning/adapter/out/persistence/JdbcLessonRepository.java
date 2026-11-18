@@ -13,11 +13,33 @@ import tools.jackson.databind.json.JsonMapper;
 public class JdbcLessonRepository implements LessonRepository {
     private final JdbcTemplate jdbc;
     private final JsonMapper json = JsonMapper.builder().build();
+    private final java.util.concurrent.ConcurrentHashMap<UUID, Version> versionCache = new java.util.concurrent.ConcurrentHashMap<>();
+
     public JdbcLessonRepository(JdbcTemplate jdbc) { this.jdbc = jdbc; }
     @Override public Optional<Version> find(UUID lessonId, UUID versionId, Instant at) {
+        if (versionId != null) {
+            Version cached = versionCache.get(versionId);
+            if (cached != null && cached.publishedAt() != null && !cached.publishedAt().isAfter(at) && cached.revokedAt() == null) {
+                return Optional.of(cached);
+            }
+        } else {
+            var currentIds = jdbc.queryForList("select id from asl.lesson_versions where lesson_id=? and is_current=true", UUID.class, lessonId);
+            if (!currentIds.isEmpty()) {
+                Version cached = versionCache.get(currentIds.getFirst());
+                if (cached != null && cached.publishedAt() != null && !cached.publishedAt().isAfter(at) && cached.revokedAt() == null) {
+                    return Optional.of(cached);
+                }
+            }
+        }
         // Retained explicit versions remain addressable even after catalog retirement.
-        return load("select * from asl.lesson_versions where lesson_id=? and " + (versionId == null ? "is_current=true" : "id=?"),
+        var loaded = load("select * from asl.lesson_versions where lesson_id=? and " + (versionId == null ? "is_current=true" : "id=?"),
                 versionId == null ? new Object[]{lessonId} : new Object[]{lessonId, versionId});
+        loaded.ifPresent(v -> {
+            if (v.publishedAt() != null && v.revokedAt() == null) {
+                versionCache.put(v.versionId(), v);
+            }
+        });
+        return loaded;
     }
     @Override public Version draftForUpdate(UUID versionId) {
         return load("select * from asl.lesson_versions where id=? for update", versionId).orElseThrow(LearningService::missing);
@@ -51,12 +73,14 @@ public class JdbcLessonRepository implements LessonRepository {
     }
     private Map<String, Object> object(String value) { return value == null ? null : json.readValue(value, new TypeReference<Map<String, Object>>() {}); }
     @Override public void publish(UUID id, Instant at) {
+        versionCache.remove(id);
         // Serialize publishers of different versions of the same logical lesson.
         jdbc.queryForObject("select id from asl.lessons where id=(select lesson_id from asl.lesson_versions where id=?) for update", UUID.class, id);
         jdbc.update("update asl.lesson_versions set is_current=false where lesson_id=(select lesson_id from asl.lesson_versions where id=?) and is_current", id);
         jdbc.update("update asl.lesson_versions set published_at=?,is_current=true where id=? and published_at is null", java.sql.Timestamp.from(at), id);
     }
     @Override public void revoke(UUID id, Instant at) {
+        versionCache.remove(id);
         var v = draftForUpdate(id);
         if (v.publishedAt() == null) throw LearningService.missing();
         jdbc.update("update asl.lesson_versions set is_current=false,revoked_at=coalesce(revoked_at,?) where id=?", java.sql.Timestamp.from(at), id);

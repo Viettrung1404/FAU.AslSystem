@@ -43,31 +43,57 @@ public final class DictionaryService implements DictionaryApi {
         var after = cursor == null ? null : cursors.decode(binding, cursor);
         var rows = repository.page(scope, collectionId, q, type, after, limit + 1, clock.instant());
         var visible = rows.subList(0, Math.min(rows.size(), limit));
+        var mediaMap = batchMedia(visible);
         var items = visible.stream().map(row -> scope.equals("search")
-                ? Map.<String,Object>of("type", row.type(), row.type().equals("SIGN") ? "sign" : "collection", render(row)) : render(row)).toList();
+                ? Map.<String,Object>of("type", row.type(), row.type().equals("SIGN") ? "sign" : "collection", render(row, mediaMap.get(row.assetId()))) : render(row, mediaMap.get(row.assetId()))).toList();
         Map<String,Object> result = new LinkedHashMap<>(); result.put("items", items);
         result.put("nextCursor", rows.size() > limit ? cursors.encode(binding, visible.getLast().position()) : null);
         return result;
     }
     @Override public Map<String,Object> sign(UUID id) {
         if (repository.removedSign(id, clock.instant())) throw new ApplicationFailure(ApplicationFailure.Kind.REMOVED,"CONTENT_REMOVED","This sign has been removed");
-        return render(find(id, "SIGN"), true);
+        var entry = find(id, "SIGN");
+        Object asset;
+        try { asset = entry.assetId() == null ? null : media.refresh(List.of(entry.assetId())).getFirst(); }
+        catch (ApplicationFailure failure) {
+            if (failure.kind() != ApplicationFailure.Kind.NOT_FOUND && failure.kind() != ApplicationFailure.Kind.REMOVED) throw failure;
+            throw new ApplicationFailure(failure.kind(), failure.kind() == ApplicationFailure.Kind.REMOVED ? "CONTENT_REMOVED" : "NOT_FOUND", "Sign media unavailable");
+        }
+        return render(entry, asset);
     }
-    @Override public Map<String,Object> collection(UUID id) { return render(find(id, "COLLECTION")); }
+    @Override public Map<String,Object> collection(UUID id) {
+        var entry = find(id, "COLLECTION");
+        Object asset;
+        try { asset = entry.assetId() == null ? null : media.refresh(List.of(entry.assetId())).getFirst(); }
+        catch (ApplicationFailure failure) {
+            if (failure.kind() != ApplicationFailure.Kind.NOT_FOUND && failure.kind() != ApplicationFailure.Kind.REMOVED) throw failure;
+            throw new ApplicationFailure(ApplicationFailure.Kind.UNAVAILABLE,"SERVICE_UNAVAILABLE","Published dictionary media unavailable");
+        }
+        return render(entry, asset);
+    }
     private Entry find(UUID id, String type) {
         return repository.find(id, type, clock.instant()).orElseThrow(() -> new ApplicationFailure(ApplicationFailure.Kind.NOT_FOUND, "NOT_FOUND", "Published catalog entry not found"));
     }
-    private Map<String,Object> render(Entry e) {
-        return render(e, false);
-    }
-    private Map<String,Object> render(Entry e, boolean signDetail) {
-        Object asset;
-        try { asset = e.assetId() == null ? null : media.refresh(List.of(e.assetId())).getFirst(); }
-        catch (ApplicationFailure failure) {
-            if (failure.kind() != ApplicationFailure.Kind.NOT_FOUND && failure.kind() != ApplicationFailure.Kind.REMOVED) throw failure;
-            if (signDetail) throw new ApplicationFailure(failure.kind(), failure.kind() == ApplicationFailure.Kind.REMOVED ? "CONTENT_REMOVED" : "NOT_FOUND", "Sign media unavailable");
-            throw new ApplicationFailure(ApplicationFailure.Kind.UNAVAILABLE,"SERVICE_UNAVAILABLE","Published dictionary media unavailable");
+    private Map<UUID, Object> batchMedia(List<Entry> entries) {
+        Set<UUID> assetIds = new LinkedHashSet<>();
+        for (Entry e : entries) {
+            if (e.assetId() != null) assetIds.add(e.assetId());
         }
+        if (assetIds.isEmpty()) return Map.of();
+        List<UUID> idList = new ArrayList<>(assetIds);
+        Map<UUID, Object> map = new HashMap<>();
+        try {
+            for (int i = 0; i < idList.size(); i += 100) {
+                var batch = idList.subList(i, Math.min(i + 100, idList.size()));
+                media.refresh(batch).forEach(item -> map.put(item.assetId(), item));
+            }
+        } catch (ApplicationFailure failure) {
+            if (failure.kind() != ApplicationFailure.Kind.NOT_FOUND && failure.kind() != ApplicationFailure.Kind.REMOVED) throw failure;
+            throw new ApplicationFailure(ApplicationFailure.Kind.UNAVAILABLE, "SERVICE_UNAVAILABLE", "Published dictionary media unavailable");
+        }
+        return map;
+    }
+    private Map<String,Object> render(Entry e, Object asset) {
         if (e.type().equals("SIGN")) return Map.of("id", e.id(), "name", e.name(), "video", asset);
         Map<String,Object> value = new LinkedHashMap<>();
         value.put("id", e.id()); value.put("name", e.name()); value.put("description", e.description()); value.put("cover", asset);

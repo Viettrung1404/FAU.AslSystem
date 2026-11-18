@@ -18,6 +18,9 @@ import tools.jackson.databind.json.JsonMapper;
 public class JdbcSyncRepository implements SyncRepository {
     private final JdbcTemplate jdbc;
     private final JsonMapper json=JsonMapper.builder().build();
+    private record CachedStats(Map<String, Object> data, long expiresAtMillis) {}
+    private final java.util.concurrent.ConcurrentHashMap<UUID, CachedStats> statsCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long STATS_CACHE_TTL_MILLIS = 30_000L;
     public JdbcSyncRepository(JdbcTemplate jdbc) { this.jdbc=jdbc; }
     public void lock(UUID owner) {
         jdbc.update("insert into asl.sync_streams(user_id) values (?) on conflict do nothing",owner);
@@ -32,6 +35,7 @@ public class JdbcSyncRepository implements SyncRepository {
         return jdbc.query("select * from asl.sync_changes where user_id=? and kind=? and entity_key=? order by sequence_no desc limit 1",(r,n)->change(r),owner,kind,key).stream().findFirst();
     }
     public Change save(UUID owner,String kind,String key,long revision,Map<String,Object> d,String path) {
+        statsCache.remove(owner);
         try { return saveValidated(owner,kind,key,revision,d,path); }
         catch(DataIntegrityViolationException failure) {
             String detail=Objects.toString(failure.getMostSpecificCause().getMessage(),"");
@@ -83,13 +87,20 @@ public class JdbcSyncRepository implements SyncRepository {
     }
     public List<Change> changes(UUID owner,long watermark,long after,int limit) { return jdbc.query("select * from asl.sync_changes where user_id=? and sequence_no>? and sequence_no<=? order by sequence_no limit ?",(r,n)->change(r),owner,after,watermark,limit); }
     public Map<String,Object> stats(UUID owner) {
+        long now = System.currentTimeMillis();
+        CachedStats cached = statsCache.get(owner);
+        if (cached != null && now < cached.expiresAtMillis()) {
+            return cached.data();
+        }
         Map<String,Object> result=new LinkedHashMap<>();
         result.put("totalPoints",jdbc.queryForObject("select total_points from asl.user_total_points where user_id=?",Long.class,owner));
         result.put("completedLessonIds",jdbc.queryForList("select lesson_id from asl.user_completed_lessons where user_id=? order by lesson_id",UUID.class,owner));
         result.put("learnedSignIds",jdbc.queryForList("select sign_id from asl.user_learned_signs where user_id=? order by sign_id",UUID.class,owner));
         var streak=jdbc.queryForMap("select current_streak,record_streak from asl.user_streaks where user_id=?",owner);
         result.put("currentStreak",streak.get("current_streak")); result.put("recordStreak",streak.get("record_streak"));
-        result.put("activityDates",jdbc.query("select activity_date from asl.user_activity_dates where user_id=? order by activity_date",(r,n)->r.getDate(1).toLocalDate().toString(),owner)); return result;
+        result.put("activityDates",jdbc.query("select activity_date from asl.user_activity_dates where user_id=? order by activity_date",(r,n)->r.getDate(1).toLocalDate().toString(),owner));
+        statsCache.put(owner, new CachedStats(result, now + STATS_CACHE_TTL_MILLIS));
+        return result;
     }
     private Change change(ResultSet r) throws SQLException { return new Change(r.getLong("sequence_no"),r.getString("kind"),r.getString("entity_key"),r.getLong("revision"),object(r.getString("data"))); }
     private Map<String,Object> object(String data) { return json.readValue(data,new TypeReference<Map<String,Object>>(){}); }

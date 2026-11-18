@@ -3,6 +3,7 @@ import com.asl.backend.catalog.application.port.out.CatalogRepository;
 import com.asl.backend.catalog.domain.*;
 import java.time.Instant;
 import java.util.*;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Repository;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowCallbackHandler;
@@ -16,7 +17,17 @@ public class JdbcCatalogRepository implements CatalogRepository {
     private final JsonMapper json = JsonMapper.builder().build();
     public JdbcCatalogRepository(JdbcTemplate jdbc) { sql = new NamedParameterJdbcTemplate(jdbc); }
 
+    @Cacheable(value = "units", key = "'initial_' + #count")
+    public List<UnitReference> findInitialUnits(int count, Instant at) {
+        var parameters = new MapSqlParameterSource().addValue("at", Timestamp.from(at)).addValue("count", count);
+        return sql.query("select id,title,position from asl.units where published_at<=:at and retired_at is null order by position,id limit :count",
+                parameters, (row, index) -> new UnitReference(row.getObject("id", UUID.class), row.getString("title"), row.getInt("position")));
+    }
+
     @Override public List<UnitReference> findUnits(UnitPosition after, int count, Instant at) {
+        if (after == null && count <= 50) {
+            return findInitialUnits(count, at);
+        }
         var parameters = new MapSqlParameterSource().addValue("at", Timestamp.from(at)).addValue("count", count);
         String seek = "";
         if (after != null) {
@@ -53,6 +64,7 @@ public class JdbcCatalogRepository implements CatalogRepository {
         });
         return results.values().stream().map(lesson -> new LessonReference(lesson.unit, lesson.id, lesson.position, lesson.prerequisites)).toList();
     }
+    @Cacheable(value = "config", key = "'policy'")
     @Override public CatalogPolicy policy() {
         Map<String, String> rows = new HashMap<>();
         sql.getJdbcTemplate().query("select setting_key,setting_value::text from asl.app_settings where setting_key in ('mobile_policy','scoring_policy')",

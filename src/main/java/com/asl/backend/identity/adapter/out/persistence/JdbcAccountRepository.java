@@ -6,6 +6,7 @@ import com.asl.backend.identity.application.port.out.AccountRepository;
 import com.asl.backend.identity.application.port.out.IdTokenVerifier.Identity;
 import com.asl.backend.platform.application.api.ApplicationFailure;
 import java.util.*;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -25,6 +26,7 @@ public class JdbcAccountRepository implements AccountRepository {
                 rs.getTimestamp("suspended_at") != null), uid);
         return rows.isEmpty() ? null : rows.getFirst();
     }
+    @Cacheable(value = "legal-documents", key = "'active'")
     @Override public List<LegalDocument> legalDocuments() {
         return jdbc.query("""
             select distinct on (document_type) id,document_type,version,public_url,published_at

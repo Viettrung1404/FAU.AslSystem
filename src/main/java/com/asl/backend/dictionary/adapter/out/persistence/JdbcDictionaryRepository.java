@@ -31,7 +31,10 @@ public class JdbcDictionaryRepository implements DictionaryRepository {
         else if (scope.equals("collections") || (scope.equals("search") && type.equals("COLLECTION"))) { source = COLLECTIONS; args.add(stamp); args.add(stamp); }
         else { source = SIGNS + " union all " + COLLECTIONS; args.add(stamp); args.add(stamp); args.add(stamp); }
         String sql = "select * from (" + source + ") e where true";
-        if (scope.equals("search")) { sql += " and strpos(search_name,lower(normalize(btrim(?), NFC)))>0"; args.add(q); }
+        if (scope.equals("search")) {
+            sql += " and search_name like ('%' || lower(normalize(btrim(?), NFC)) || '%') escape '\\'";
+            args.add(escapeLike(q));
+        }
         if (after != null) {
             if (scope.equals("membership")) { sql += " and (ordering,id)>(?,?)"; args.add(after.order()); args.add(after.id()); }
             else { sql += " and (search_name collate \"C\",type collate \"C\",id)>(? collate \"C\",? collate \"C\",?)"; args.add(after.name()); args.add(after.type()); args.add(after.id()); }
@@ -39,6 +42,11 @@ public class JdbcDictionaryRepository implements DictionaryRepository {
         sql += scope.equals("membership") ? " order by ordering,id limit ?" : " order by search_name collate \"C\",type collate \"C\",id limit ?";
         args.add(count); return query(sql, args);
     }
+    private static String escapeLike(String input) {
+        if (input == null) return "";
+        return input.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    }
+
     private List<Entry> query(String sql, List<?> args) {
         return jdbc.query(sql, (r,n) -> new Entry(r.getObject("id",UUID.class),r.getString("type"),r.getString("name"),r.getString("search_name"),
             r.getObject("asset_id",UUID.class),r.getString("description"),r.getBoolean("premium"),r.getInt("sign_count"),r.getInt("ordering")), args.toArray());

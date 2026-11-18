@@ -21,6 +21,8 @@ public class MediaHttpPolicy implements HandlerInterceptor {
             .comparing((Bucket bucket) -> bucket.until)
             .thenComparing(bucket -> bucket.address, Comparator.nullsFirst(Comparator.naturalOrder())));
 
+    private final java.util.concurrent.locks.ReentrantLock lock = new java.util.concurrent.locks.ReentrantLock();
+
     public MediaHttpPolicy(Clock clock, int limit, Duration window, int maxClients) {
         if (limit < 1 || window == null || window.isZero() || window.isNegative() || maxClients < 1) {
             throw new IllegalArgumentException("Media rate limit settings must be positive");
@@ -31,34 +33,39 @@ public class MediaHttpPolicy implements HandlerInterceptor {
         this.maxClients = maxClients;
     }
 
-    @Override public synchronized boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+    @Override public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         response.setHeader("Cache-Control", "no-store");
         var now = clock.instant();
         String key = request.getRemoteAddr();
-        var bucket = clients.get(key);
-        if (bucket == null || !bucket.until.isAfter(now)) {
-            if (bucket != null) {
-                expirations.remove(bucket);
-            } else if (clients.size() >= maxClients) {
-                var earliest = expirations.first();
-                if (earliest.until.isAfter(now)) {
-                    retryAfter(response, now, earliest.until);
-                    throw limited();
+        lock.lock();
+        try {
+            var bucket = clients.get(key);
+            if (bucket == null || !bucket.until.isAfter(now)) {
+                if (bucket != null) {
+                    expirations.remove(bucket);
+                } else if (clients.size() >= maxClients) {
+                    var earliest = expirations.first();
+                    if (earliest.until.isAfter(now)) {
+                        retryAfter(response, now, earliest.until);
+                        throw limited();
+                    }
+                    // Reclaim only the slot needed by this request; never scan all clients.
+                    expirations.pollFirst();
+                    clients.remove(earliest.address);
                 }
-                // Reclaim only the slot needed by this request; never scan all clients.
-                expirations.pollFirst();
-                clients.remove(earliest.address);
+                bucket = new Bucket(key, now.plus(window));
+                clients.put(key, bucket);
+                expirations.add(bucket);
             }
-            bucket = new Bucket(key, now.plus(window));
-            clients.put(key, bucket);
-            expirations.add(bucket);
+            if (bucket.used >= limit) {
+                retryAfter(response, now, bucket.until);
+                throw limited();
+            }
+            bucket.used++;
+            return true;
+        } finally {
+            lock.unlock();
         }
-        if (bucket.used >= limit) {
-            retryAfter(response, now, bucket.until);
-            throw limited();
-        }
-        bucket.used++;
-        return true;
     }
 
     private static void retryAfter(HttpServletResponse response, Instant now, Instant until) {
